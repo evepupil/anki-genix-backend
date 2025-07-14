@@ -1,0 +1,16 @@
+# AI服务依赖
+openai>=1.0.0
+
+# Django和Zappa依赖
+django>=4.0.0
+zappa>=0.56.0
+
+# Anki导出依赖
+genanki>=0.13.0
+
+# 工具依赖
+pyyaml>=6.0
+python-dotenv>=1.0.0
+
+# 测试依赖
+pytest>=7.0.0 
