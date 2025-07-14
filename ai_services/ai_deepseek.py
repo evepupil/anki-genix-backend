@@ -20,7 +20,7 @@ class DeepseekAIService(AIServiceBase):
             response = self.client.chat.completions.create(
                 model="deepseek-v3",
                 messages=[{"role": "user", "content": prompt}],
-                stream=stream,
+                stream=True,
                 extra_body={
                     "hy_source": self.hy_source,
                     "hy_user": self.hy_user,
@@ -28,9 +28,14 @@ class DeepseekAIService(AIServiceBase):
                     "should_remove_conversation": True,
                 },
             )
-            result = response.choices[0].message.content
-            self.logger.debug(f"API调用成功: 响应长度={len(result)}")
-            return result
+            # 拼接流式响应
+            response_text = ""
+            for chunk in response:
+                if hasattr(chunk.choices[0].delta, 'content') and chunk.choices[0].delta.content:
+                    line = chunk.choices[0].delta.content
+                    response_text += line.replace('[text]', '')
+            self.logger.debug(f"API调用成功: 响应长度={len(response_text)}")
+            return response_text
         except Exception as e:
             self.logger.error(f"API调用失败: {str(e)}")
             raise
