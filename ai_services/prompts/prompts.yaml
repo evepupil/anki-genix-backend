@@ -1,0 +1,158 @@
+basic_card:
+  zh:
+    prompt: |
+      你是一名教育专家，正在为主题"[TOPIC]"制作Anki闪卡。请生成[NUMBER]组独特的问答对。每个问题应简明（15字以内），考查单一知识点，适合间隔重复。答案应准确、简短（30字以内），只包含必要信息。避免内容和措辞重复。输出JSON格式：
+      [
+        {"question": "问题文本", "answer": "答案文本"},
+        ...
+      ]
+      主题示例："高中生物"
+      数量：10
+      预期输出：
+      [
+        {"question": "细胞的能量工厂是什么？", "answer": "线粒体。"},
+        {"question": "携带遗传信息的分子是什么？", "answer": "DNA（脱氧核糖核酸）。"}
+      ]
+      语言：{language}
+  en:
+    prompt: |
+      You are an expert educator creating Anki flashcards for the topic "[TOPIC]". Generate [NUMBER] unique question-answer pairs. Each question should be concise (under 15 words), test a single concept, and be suitable for spaced repetition. Answers should be accurate, brief (under 30 words), and include only essential information. Avoid repetition in concepts or phrasing. Output in JSON format:
+      [
+        {"question": "Question text", "answer": "Answer text"},
+        ...
+      ]
+      Example for "High School Biology":
+      [
+        {"question": "What is the powerhouse of the cell?", "answer": "Mitochondria."},
+        {"question": "What molecule carries genetic information?", "answer": "DNA (Deoxyribonucleic Acid)."}
+      ]
+      Language: {language}
+
+catalog_analysis:
+  zh:
+    prompt: |
+      你是一名知识结构专家。请分析主题"[TOPIC]"，生成一个系统化、结构化的知识目录。目录应该：
+      1. 有清晰的层级结构（最多3层）
+      2. 每个章节有简短的描述（不超过30字）
+      3. 内容全面且逻辑合理
+      
+      输出格式必须是JSON，层级结构如下：
+      ```
+      [
+        {
+          "chapter": "章节名称",
+          "description": "章节简短描述",
+          "sections": [
+            {
+              "section": "小节名称", 
+              "description": "小节简短描述",
+              "subsections": [
+                {"subsection": "子小节名称", "description": "子小节简短描述"}
+              ]
+            }
+          ]
+        }
+      ]
+      ```
+      
+      语言：{language}
+  en:
+    prompt: |
+      You are a knowledge structure expert. Please analyze the topic "[TOPIC]" and generate a systematic, structured knowledge catalog. The catalog should:
+      1. Have a clear hierarchical structure (maximum 3 levels)
+      2. Each section should have a brief description (not exceeding 30 words)
+      3. Be comprehensive and logically organized
+      
+      Output must be in JSON format with the following hierarchical structure:
+      ```
+      [
+        {
+          "chapter": "Chapter name",
+          "description": "Brief chapter description",
+          "sections": [
+            {
+              "section": "Section name", 
+              "description": "Brief section description",
+              "subsections": [
+                {"subsection": "Subsection name", "description": "Brief subsection description"}
+              ]
+            }
+          ]
+        }
+      ]
+      ```
+      
+      Language: {language}
+
+cloze_card:
+  zh:
+    prompt: |
+      针对主题"[TOPIC]"，生成[NUMBER]个Anki填空（cloze deletion）闪卡。每张卡片为一句话，使用{{c1::术语}}格式遮蔽一个关键术语。句子简明（20字以内），考查不同知识点，避免内容重叠。输出JSON格式：
+      [
+        {"cloze": "句子含{{c1::术语}}"},
+        ...
+      ]
+      主题示例："CET-4英语词汇"
+      数量：5
+      预期输出：
+      [
+        {"cloze": "这位政治家的决定很{{c1::有争议}}，引发激烈讨论。"},
+        {"cloze": "她展现了极强的{{c1::韧性}}，克服了挑战。"}
+      ]
+      语言：{language}
+  en:
+    prompt: |
+      Create [NUMBER] cloze deletion Anki flashcards for the topic "[TOPIC]". Each card should have a single sentence with one key term or phrase blanked out using {{c1::term}}. Ensure sentences are concise (under 20 words), test distinct concepts, and avoid overlapping content. Output in JSON format:
+      [
+        {"cloze": "Sentence with {{c1::term}}"},
+        ...
+      ]
+      Example for "English Vocabulary for CET-4":
+      [
+        {"cloze": "The politician's decision was {{c1::controversial}} and sparked heated debates."},
+        {"cloze": "She showed great {{c1::resilience}} in overcoming challenges."}
+      ]
+      Language: {language}
+multiple_choice_card:
+  zh:
+    prompt: |
+      针对主题"[TOPIC]"，生成[NUMBER]个Anki多选题闪卡。每题4个选项，1个正确答案，考查不同知识点。问题简明（15字以内），选项清晰。输出JSON格式：
+      [
+        {
+          "question": "问题文本",
+          "options": ["选项1", "选项2", "选项3", "选项4"],
+          "answer": "正确选项"
+        },
+        ...
+      ]
+      主题示例："世界历史"
+      数量：5
+      预期输出：
+      [
+        {
+          "question": "谁主导了法国大革命的恐怖统治？",
+          "options": ["拿破仑", "罗伯斯庇尔", "路易十六", "玛丽·安托瓦内特"],
+          "answer": "罗伯斯庇尔"
+        }
+      ]
+      语言：{language}
+  en:
+    prompt: |
+      Generate [NUMBER] multiple-choice Anki flashcards for the topic "[TOPIC]". Each question should have 4 options, one correct answer, and test a unique concept. Questions should be concise (under 15 words), and options clear and distinct. Output in JSON format:
+      [
+        {
+          "question": "Question text",
+          "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+          "answer": "Correct option"
+        },
+        ...
+      ]
+      Example for "World History":
+      [
+        {
+          "question": "Who led the French Revolution's Reign of Terror?",
+          "options": ["Napoleon", "Robespierre", "Louis XVI", "Marie Antoinette"],
+          "answer": "Robespierre"
+        }
+      ]
+      Language: {language} 
