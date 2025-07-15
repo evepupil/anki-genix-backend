@@ -9,6 +9,8 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'rest_framework',
     'business',
+    'django.contrib.contenttypes',
+    'django.contrib.auth'
 ]
 
 MIDDLEWARE = [
