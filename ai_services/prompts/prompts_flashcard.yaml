@@ -28,62 +28,6 @@ basic_card:
       ]
       Language: {language}
 
-catalog_analysis:
-  zh:
-    prompt: |
-      你是一名知识结构专家。请分析主题"[TOPIC]"，生成一个系统化、结构化的知识目录。目录应该：
-      1. 有清晰的层级结构（最多3层）
-      2. 每个章节有简短的描述（不超过30字）
-      3. 内容全面且逻辑合理
-      
-      输出格式必须是JSON，层级结构如下：
-      ```
-      [
-        {
-          "chapter": "章节名称",
-          "description": "章节简短描述",
-          "sections": [
-            {
-              "section": "小节名称", 
-              "description": "小节简短描述",
-              "subsections": [
-                {"subsection": "子小节名称", "description": "子小节简短描述"}
-              ]
-            }
-          ]
-        }
-      ]
-      ```
-      
-      语言：{language}
-  en:
-    prompt: |
-      You are a knowledge structure expert. Please analyze the topic "[TOPIC]" and generate a systematic, structured knowledge catalog. The catalog should:
-      1. Have a clear hierarchical structure (maximum 3 levels)
-      2. Each section should have a brief description (not exceeding 30 words)
-      3. Be comprehensive and logically organized
-      
-      Output must be in JSON format with the following hierarchical structure:
-      ```
-      [
-        {
-          "chapter": "Chapter name",
-          "description": "Brief chapter description",
-          "sections": [
-            {
-              "section": "Section name", 
-              "description": "Brief section description",
-              "subsections": [
-                {"subsection": "Subsection name", "description": "Brief subsection description"}
-              ]
-            }
-          ]
-        }
-      ]
-      ```
-      
-      Language: {language}
-
 cloze_card:
   zh:
     prompt: |
@@ -113,6 +57,7 @@ cloze_card:
         {"cloze": "She showed great {{c1::resilience}} in overcoming challenges."}
       ]
       Language: {language}
+
 multiple_choice_card:
   zh:
     prompt: |
