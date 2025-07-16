@@ -13,7 +13,7 @@ basic_card:
         {"question": "细胞的能量工厂是什么？", "answer": "线粒体。"},
         {"question": "携带遗传信息的分子是什么？", "answer": "DNA（脱氧核糖核酸）。"}
       ]
-      语言：{language}
+      语言：{lang}
   en:
     prompt: |
       You are an expert educator creating Anki flashcards for the topic "[TOPIC]". Generate [NUMBER] unique question-answer pairs. Each question should be concise (under 15 words), test a single concept, and be suitable for spaced repetition. Answers should be accurate, brief (under 30 words), and include only essential information. Avoid repetition in concepts or phrasing. Output in JSON format:
@@ -26,7 +26,7 @@ basic_card:
         {"question": "What is the powerhouse of the cell?", "answer": "Mitochondria."},
         {"question": "What molecule carries genetic information?", "answer": "DNA (Deoxyribonucleic Acid)."}
       ]
-      Language: {language}
+      Language: {lang}
 
 cloze_card:
   zh:
@@ -43,7 +43,7 @@ cloze_card:
         {"cloze": "这位政治家的决定很{{c1::有争议}}，引发激烈讨论。"},
         {"cloze": "她展现了极强的{{c1::韧性}}，克服了挑战。"}
       ]
-      语言：{language}
+      语言：{lang}
   en:
     prompt: |
       Create [NUMBER] cloze deletion Anki flashcards for the topic "[TOPIC]". Each card should have a single sentence with one key term or phrase blanked out using {{c1::term}}. Ensure sentences are concise (under 20 words), test distinct concepts, and avoid overlapping content. Output in JSON format:
@@ -56,7 +56,7 @@ cloze_card:
         {"cloze": "The politician's decision was {{c1::controversial}} and sparked heated debates."},
         {"cloze": "She showed great {{c1::resilience}} in overcoming challenges."}
       ]
-      Language: {language}
+      Language: {lang}
 
 multiple_choice_card:
   zh:
@@ -80,7 +80,7 @@ multiple_choice_card:
           "answer": "罗伯斯庇尔"
         }
       ]
-      语言：{language}
+      语言：{lang}
   en:
     prompt: |
       Generate [NUMBER] multiple-choice Anki flashcards for the topic "[TOPIC]". Each question should have 4 options, one correct answer, and test a unique concept. Questions should be concise (under 15 words), and options clear and distinct. Output in JSON format:
@@ -100,4 +100,4 @@ multiple_choice_card:
           "answer": "Robespierre"
         }
       ]
-      Language: {language} 
+      Language: {lang} 

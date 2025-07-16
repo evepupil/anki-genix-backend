@@ -17,7 +17,7 @@ summarize_text: |
   Length: - Ensure the response has a minimum of 800 words
   Tone: - Use a default tone in your response.
 
-  Language: - The entire output, including **section titles and labels**, must be written in the "{language}" language (For example, ###Summary, ###Highlights, ###Key Insights, ###Outline, ###Core Concepts, ###Keywords, ###FAQ, etc. all need to be translated into {language} language.).
+  Language: - The entire output, including **section titles and labels**, must be written in the "{lang}" language (For example, ###Summary, ###Highlights, ###Key Insights, ###Outline, ###Core Concepts, ###Keywords, ###FAQ, etc. all need to be translated into {lang} language.).
   - Do **not** include any separators (`---`), or additional text outside of the task results. 
 
 # prompts_summary.yaml
@@ -39,5 +39,5 @@ summarize_file: |
   Length: - Ensure the response has a minimum of 800 words
   Tone: - Use a default tone in your response.
 
-  Language: - The entire output, including **section titles and labels**, must be written in the "{language}" language (For example, ###Summary, ###Highlights, ###Key Insights, ###Outline, ###Core Concepts, ###Keywords, ###FAQ, etc. all need to be translated into {language} language.).
+  Language: - The entire output, including **section titles and labels**, must be written in the "{lang}" language (For example, ###Summary, ###Highlights, ###Key Insights, ###Outline, ###Core Concepts, ###Keywords, ###FAQ, etc. all need to be translated into {lang} language.).
   - Do **not** include any separators (`---`), or additional text outside of the task results. 

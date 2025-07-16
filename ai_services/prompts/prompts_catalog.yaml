@@ -25,7 +25,7 @@ catalog_analysis:
       ]
       ```
       
-      语言：{language}
+      语言：{lang}
   en:
     prompt: |
       You are a knowledge structure expert. Please analyze the topic "[TOPIC]" and generate a systematic, structured knowledge catalog. The catalog should:
@@ -52,4 +52,4 @@ catalog_analysis:
       ]
       ```
       
-      Language: {language} 
+      Language: {lang} 
