@@ -1,2 +1,3 @@
 from .catalog_analysis import CatalogAnalysisWorkflow
-from .flashcard_generate import FlashcardGenerateWorkflow 
+from .flashcard_generate import FlashcardGenerateWorkflow
+from .summary_workflow import SummaryWorkflow 
