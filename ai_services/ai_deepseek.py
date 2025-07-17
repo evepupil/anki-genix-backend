@@ -7,6 +7,10 @@ from utils.logger import get_logger
 
 class DeepseekAIService(AIServiceBase):
     def __init__(self, base_url=None, api_key=None, agent_id=None, hy_source=None, hy_user=None):
+        base_url =  "http://39.104.17.54:8000/v1/"
+        api_key = "8tE8bq6InCxff5mUqQZfc9aGHP6NPD80Cr/k258SiLJ9CYW8HiMzU5pREYyvnbvjj2OpKM+T7S7ee8ghrobpqLmiGPzSdAUMQl/MAAYWX+8kuVZo/AW2p3u6OBmDiYBzj7fh3CZr8YXN90ZLbp9BuodnnBQofxVAX1Lxv/i63vrxRa9Jo8pnVxl0yUkBQYNKKfW4hQhyjNc/ydiZOqtze8VuB1g0GiVSZdHe3q3tZ0b6kffbkMz8yxb4q8QUQwL02K41IAddgfQ1/lN9hfzLTSt8y5SYP5Wdwq90FlryoJ7eJWezPZrfGwu1HXcu1gxkY+nr8r9y2XBcBOdph2R4l8w0XjD+UTLJup75mPAArtmRlV5nXqDIn1uQ1M6tpE90fhqp2GfHKyjGZ2VIx76Gu/VNS3KxQm0xqN53uaR4p/JfyOfFjFKcKsqmjr0i7+FfAdDDl2fsF6OlVZluTmi/sovQ6RuPLTRypa2F78fdxbU9B4WqAGiv5uochHDcCXC9dlumv+UFl5QCd4tEGxFTX1ZeqDn8NKInrQLAN0HXSQBRLU4cvUUs56SDdOXj3sPLz3o0qoUTBIzIANypSaJaYeHshewrc1a3tOwXizN70ZLJZ0EWyD/nJp2nCh7wJNck"
+        agent_id = "naQivTmsDa"
+        hy_user = "d76efed3f1fb4cf1b1a3b4789111bc6c"
         self.base_url = base_url or os.getenv("DEEPSEEK_BASE_URL")
         self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
         self.agent_id = agent_id or os.getenv("DEEPSEEK_AGENT_ID")

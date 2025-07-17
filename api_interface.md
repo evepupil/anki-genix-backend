@@ -9,23 +9,33 @@
   ```json
   {
     "topic": "机器学习基础",
-    "lang": "zh"
+    "lang": "zh"  // 可选，默认为"zh"，支持 zh/en/ja
   }
   ```
-- **响应示例**：
+- **成功响应**：
   ```json
-  [
-    {
-      "chapter": "机器学习基础概念",
-      "description": "介绍机器学习的基本概念和应用场景",
-      "sections": [
-        {
-          "section": "什么是机器学习",
-          "description": "机器学习的定义和历史发展"
-        }
-      ]
-    }
-  ]
+  {
+    "topic": "机器学习基础",
+    "lang": "zh",
+    "catalog": [
+      {
+        "chapter": "机器学习基础概念",
+        "description": "介绍机器学习的基本概念和应用场景",
+        "sections": [
+          {
+            "section": "什么是机器学习",
+            "description": "机器学习的定义和历史发展"
+          }
+        ]
+      }
+    ]
+  }
+  ```
+- **错误响应**：
+  ```json
+  {
+    "error": "topic为必填项"
+  }
   ```
 
 ---
