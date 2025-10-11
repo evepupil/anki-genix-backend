@@ -105,6 +105,7 @@ class FlashcardBusiness:
                 "error": str(e),
                 "cards": []
             }
+    def generate_flashcards_from_text(self, text_content):
         """
         根据文本内容生成闪卡列表。
 
