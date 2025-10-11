@@ -112,8 +112,8 @@ class DeepseekAIService(AIServiceBase):
             response_text = ""
             for chunk in response:
                 if hasattr(chunk.choices[0].delta, 'content') and chunk.choices[0].delta.content:
-                    line = chunk.choices[0].delta.content
-                    response_text += line.replace('[text]', '')
+                    line = (json.loads(chunk.choices[0].delta.content).get("msg", "") or "")
+                    response_text += line
             self.logger.debug(f"chat_with_files响应成功: 响应长度={len(response_text)}")
             return response_text
         except Exception as e:
