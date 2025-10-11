@@ -24,12 +24,27 @@ class AIWorkflow:
 
     def parse_result(self, ai_result: str):
         self.logger.debug(f"AI原始返回: {ai_result}")
+
+        # 清理AI返回的内容，去除markdown代码块标记
+        cleaned_result = ai_result.strip()
+
+        # 移除 ```json 和 ``` 标记
+        if cleaned_result.startswith("```json"):
+            cleaned_result = cleaned_result[7:]  # 移除 ```json
+        elif cleaned_result.startswith("```"):
+            cleaned_result = cleaned_result[3:]  # 移除 ```
+
+        if cleaned_result.endswith("```"):
+            cleaned_result = cleaned_result[:-3]  # 移除结尾的 ```
+
+        cleaned_result = cleaned_result.strip()
+
         try:
-            result = json.loads(ai_result)
+            result = json.loads(cleaned_result)
             self.logger.info(f"AI返回JSON解析成功: {type(result)}")
             return result
         except Exception as e:
-            self.logger.warning(f"AI返回JSON解析失败: {str(e)} | 原始内容: {ai_result}")
+            self.logger.warning(f"AI返回JSON解析失败: {str(e)} | 清理后内容: {cleaned_result[:200]}...")
             return ai_result
 
     def run(self, params: dict):
