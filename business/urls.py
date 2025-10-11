@@ -1,7 +1,10 @@
 from django.urls import path
-from business.views import FlashcardGenerateView, CatalogGenerateView
+from business import views
 
 urlpatterns = [
-    path('flashcards/', FlashcardGenerateView.as_view(), name='generate_flashcards'),
-    path('catalog/', CatalogGenerateView.as_view(), name='generate_catalog'),
+    # 健康检查
+    path('health/', views.health_check, name='health_check'),
+
+    # 文本生成闪卡
+    path('flashcards/generate/text/', views.generate_flashcards_from_text, name='generate_flashcards_from_text'),
 ]

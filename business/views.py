@@ -1,49 +1,91 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from business.flashcard import FlashcardBusiness
+from utils.logger import get_logger
 
-class FlashcardGenerateView(APIView):
+logger = get_logger(name="api.views")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def generate_flashcards_from_text(request):
     """
-    POST /api/flashcards/
-    请求参数: {card_type, topic, number, lang}
-    返回: 闪卡列表
+    API接口：根据文本生成闪卡
+
+    请求方法: POST
+    请求体 (JSON):
+    {
+        "text": "要学习的文本内容"
+    }
+
+    响应 (JSON):
+    {
+        "success": true,
+        "cards": [
+            {
+                "question": "问题",
+                "answer": "答案"
+            }
+        ]
+    }
     """
-    def post(self, request):
-        card_type = request.data.get('card_type')
-        topic = request.data.get('topic')
-        number = request.data.get('number', 10)
-        lang = request.data.get('lang', 'zh')
-        if not card_type or not topic:
-            return Response({'error': 'card_type和topic为必填项'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        # 解析请求数据
+        data = json.loads(request.body)
+        text_content = data.get('text', '').strip()
+
+        logger.info(f"收到文本闪卡生成请求，文本: {text_content}")
+
+        # 验证输入
+        if not text_content:
+            logger.warning("文本内容为空")
+            return JsonResponse({
+                'success': False,
+                'error': '请提供要学习的文本内容'
+            }, status=400)
+
+        # 调用业务层生成闪卡
         biz = FlashcardBusiness()
-        try:
-            cards = biz.generate_flashcards(card_type, topic, number, lang)
-            return Response(cards, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        result = biz.generate_flashcards_from_text(text_content)
+
+        # 返回结果
+        if result['success']:
+            logger.info(f"成功生成 {len(result['cards'])} 张闪卡")
+            return JsonResponse({
+                'success': True,
+                'cards': result['cards'],
+                'count': len(result['cards'])
+            })
+        else:
+            logger.error(f"闪卡生成失败: {result.get('error')}")
+            return JsonResponse({
+                'success': False,
+                'error': result.get('error', '生成闪卡失败')
+            }, status=500)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON解析错误: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': '请求数据格式错误'
+        }, status=400)
+
+    except Exception as e:
+        logger.error(f"API处理异常: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': '服务器内部错误'
+        }, status=500)
 
 
-class CatalogGenerateView(APIView):
+@require_http_methods(["GET"])
+def health_check(request):
     """
-    POST /api/catalog/
-    请求参数: {topic, lang}
-    返回: 结构化目录列表
+    健康检查接口
     """
-    def post(self, request):
-        topic = request.data.get('topic')
-        lang = request.data.get('lang', 'zh')
-
-        if not topic:
-            return Response({'error': 'topic为必填项'}, status=status.HTTP_400_BAD_REQUEST)
-
-        biz = FlashcardBusiness()
-        try:
-            catalog = biz.analyze_catalog(topic, lang)
-            return Response({
-                'topic': topic,
-                'lang': lang,
-                'catalog': catalog
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return JsonResponse({
+        'status': 'ok',
+        'service': 'ankigenix-backend'
+    })
