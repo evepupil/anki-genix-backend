@@ -36,7 +36,8 @@ class AIWorkflow:
 
         # 清理AI返回的内容，去除markdown代码块标记
         cleaned_result = ai_result.strip()
-
+        if cleaned_result.startswith("正在分析"):
+            cleaned_result = cleaned_result[4:]  # 移除 ```json
         # 移除 ```json 和 ``` 标记
         if cleaned_result.startswith("```json"):
             cleaned_result = cleaned_result[7:]  # 移除 ```json

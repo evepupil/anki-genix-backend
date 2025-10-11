@@ -3,6 +3,10 @@ from utils.logger import get_logger
 
 class FlashcardBusiness:
     def __init__(self, ai_service=None):
+        if ai_service is None:
+        # 如果没有提供ai_service，使用默认的
+            from ai_services.ai_deepseek import DeepseekAIService
+            ai_service = DeepseekAIService()
         self.ai_service = ai_service
         self.logger = get_logger(name="business.flashcard")
         self.logger.info("初始化 FlashcardBusiness")
@@ -36,7 +40,71 @@ class FlashcardBusiness:
             self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
         return result
 
-    def generate_flashcards_from_text(self, text_content):
+    def generate_flashcards_from_file(self, file_path):
+        """
+        根据文件内容生成闪卡列表。
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            dict: 包含生成结果的字典
+                - success: 是否成功
+                - cards: 闪卡列表
+                - error: 错误信息（如果失败）
+        """
+        self.logger.info(f"根据文件生成闪卡: {file_path}")
+
+        if not file_path:
+            self.logger.error("文件路径为空")
+            return {
+                "success": False,
+                "error": "文件路径不能为空",
+                "cards": []
+            }
+
+        try:
+            import os
+            if not os.path.exists(file_path):
+                self.logger.error(f"文件不存在: {file_path}")
+                return {
+                    "success": False,
+                    "error": "文件不存在",
+                    "cards": []
+                }
+
+            # 使用AI服务的chat_with_files方法
+            prompt = "请根据这个文件内容生成10个Anki闪卡。输出JSON格式：\n[\n  {\"question\": \"问题文本\", \"answer\": \"答案文本\"},\n  ...\n]"
+
+            # 调用AI服务的文件处理功能
+            ai_result = self.ai_service.chat_with_files(prompt, [file_path])
+
+            # 解析结果
+            from ai_services.workflows.base_workflow import AIWorkflow
+            workflow = AIWorkflow(ai_service=self.ai_service)
+            result = workflow.parse_result(ai_result)
+
+            if isinstance(result, list):
+                self.logger.info(f"文件闪卡生成成功: 获取到{len(result)}张闪卡")
+                return {
+                    "success": True,
+                    "cards": result
+                }
+            else:
+                self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
+                return {
+                    "success": False,
+                    "error": "AI返回格式错误",
+                    "cards": []
+                }
+
+        except Exception as e:
+            self.logger.error(f"文件闪卡生成失败: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "cards": []
+            }
         """
         根据文本内容生成闪卡列表。
 

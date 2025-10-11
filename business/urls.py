@@ -7,4 +7,5 @@ urlpatterns = [
 
     # 文本生成闪卡
     path('flashcards/generate/text/', views.generate_flashcards_from_text, name='generate_flashcards_from_text'),
+    path('flashcards/generate/file/', views.generate_flashcards_from_file, name='generate_flashcards_from_file'),
 ]
