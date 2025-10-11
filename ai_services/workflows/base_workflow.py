@@ -17,8 +17,17 @@ class AIWorkflow:
     def build_prompt(self, params: dict) -> str:
         lang = params.get("lang", "zh")
         prompt_template = load_prompt(self.prompt_key, lang)["prompt"]
-        for k in params:
-            prompt = prompt_template.replace(k, str(params[k]))
+
+        # 替换占位符，格式为 [KEY]
+        prompt = prompt_template
+        for k, v in params.items():
+            if k != "lang":  # 跳过lang参数，它用于{lang}占位符
+                placeholder = f"[{k}]"
+                prompt = prompt.replace(placeholder, str(v))
+
+        # 替换 {lang} 占位符
+        prompt = prompt.replace("{lang}", lang)
+
         self.logger.debug(f"构建Prompt: {prompt}")
         return prompt
 
