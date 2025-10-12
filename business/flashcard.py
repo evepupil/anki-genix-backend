@@ -40,12 +40,14 @@ class FlashcardBusiness:
             self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
         return result
 
-    def generate_flashcards_from_file(self, file_path):
+    def generate_flashcards_from_file(self, file_path, card_number=None, lang="zh"):
         """
         根据文件内容生成闪卡列表。
 
         Args:
             file_path: 文件路径
+            card_number: 卡片数量（可选，不提供则由AI智能决定）
+            lang: 语言，默认中文(zh)
 
         Returns:
             dict: 包含生成结果的字典
@@ -53,7 +55,7 @@ class FlashcardBusiness:
                 - cards: 闪卡列表
                 - error: 错误信息（如果失败）
         """
-        self.logger.info(f"根据文件生成闪卡: {file_path}")
+        self.logger.info(f"根据文件生成闪卡: {file_path}, 数量: {card_number or '智能'}, 语言: {lang}")
 
         if not file_path:
             self.logger.error("文件路径为空")
@@ -73,15 +75,28 @@ class FlashcardBusiness:
                     "cards": []
                 }
 
-            # 使用AI服务的chat_with_files方法
-            prompt = "请根据这个文件内容生成10个Anki闪卡。输出JSON格式：\n[\n  {\"question\": \"问题文本\", \"answer\": \"答案文本\"},\n  ...\n]"
+            # 使用FlashcardGenerateWorkflow，文件模式
+            workflow = FlashcardGenerateWorkflow(
+                card_type="basic_card",
+                form="file",
+                mode="full",
+                ai_service=self.ai_service
+            )
 
-            # 调用AI服务的文件处理功能
+            # 构建参数
+            params = {
+                "lang": lang
+            }
+
+            # 只有当card_number不为None时才添加NUMBER参数
+            if card_number is not None:
+                params["NUMBER"] = card_number
+
+            # 使用AI服务的chat_with_files方法
+            prompt = workflow.build_prompt(params)
             ai_result = self.ai_service.chat_with_files(prompt, [file_path])
 
             # 解析结果
-            from ai_services.workflows.base_workflow import AIWorkflow
-            workflow = AIWorkflow(ai_service=self.ai_service)
             result = workflow.parse_result(ai_result)
 
             if isinstance(result, list):
@@ -105,12 +120,14 @@ class FlashcardBusiness:
                 "error": str(e),
                 "cards": []
             }
-    def generate_flashcards_from_text(self, text_content):
+    def generate_flashcards_from_text(self, text_content, card_number=None, lang="zh"):
         """
         根据文本内容生成闪卡列表。
 
         Args:
             text_content: 输入的文本内容
+            card_number: 卡片数量（可选，不提供则由AI智能决定）
+            lang: 语言，默认中文(zh)
 
         Returns:
             dict: 包含生成结果的字典
@@ -118,7 +135,7 @@ class FlashcardBusiness:
                 - cards: 闪卡列表
                 - error: 错误信息（如果失败）
         """
-        self.logger.info(f"根据文本生成闪卡，文本长度: {len(text_content) if text_content else 0}")
+        self.logger.info(f"根据文本生成闪卡，文本长度: {len(text_content) if text_content else 0}, 数量: {card_number or '智能'}, 语言: {lang}")
 
         if not text_content or not text_content.strip():
             self.logger.error("文本内容为空")
@@ -130,14 +147,22 @@ class FlashcardBusiness:
 
         try:
             # 使用基础卡片类型生成闪卡
-            workflow = FlashcardGenerateWorkflow(card_type="basic_card", ai_service=self.ai_service)
+            workflow = FlashcardGenerateWorkflow(
+                card_type="basic_card",
+                form="text",
+                mode="full",
+                ai_service=self.ai_service
+            )
 
-            # 构建参数 - 将文本内容作为主题
+            # 构建参数
             params = {
-                "TOPIC": text_content,
-                "NUMBER": 10,  # 默认生成10张
-                "lang": "zh"
+                "TEXT_CONTENT": text_content,
+                "lang": lang
             }
+
+            # 只有当card_number不为None时才添加NUMBER参数
+            if card_number is not None:
+                params["NUMBER"] = card_number
 
             result = workflow.run(params)
 
@@ -163,13 +188,13 @@ class FlashcardBusiness:
                 "cards": []
             }
 
-    def generate_flashcards_from_url(self, url, card_number=10, lang="zh"):
+    def generate_flashcards_from_url(self, url, card_number=None, lang="zh"):
         """
         根据URL爬取网页内容并生成闪卡列表。
 
         Args:
             url: 网页URL地址
-            card_number: 需要生成的闪卡数量，默认10张
+            card_number: 需要生成的闪卡数量（可选，不提供则由AI智能决定）
             lang: 语言，默认中文(zh)
 
         Returns:
@@ -179,7 +204,7 @@ class FlashcardBusiness:
                 - error: 错误信息（如果失败）
                 - crawled_content: 爬取到的网页内容（可选，用于调试）
         """
-        self.logger.info(f"根据URL生成闪卡: url={url}, card_number={card_number}, lang={lang}")
+        self.logger.info(f"根据URL生成闪卡: url={url}, card_number={card_number or '智能'}, lang={lang}")
 
         if not url or not url.strip():
             self.logger.error("URL为空")
@@ -219,14 +244,22 @@ class FlashcardBusiness:
             self.logger.info(f"成功爬取网页内容，长度: {len(crawled_content)}")
 
             # 使用FlashcardGenerateWorkflow生成闪卡
-            workflow = FlashcardGenerateWorkflow(card_type="basic_card", ai_service=self.ai_service)
+            workflow = FlashcardGenerateWorkflow(
+                card_type="basic_card",
+                form="text",
+                mode="full",
+                ai_service=self.ai_service
+            )
 
-            # 构建参数 - 将爬取的内容作为主题
+            # 构建参数
             params = {
-                "TOPIC": crawled_content,
-                "NUMBER": card_number,
+                "TEXT_CONTENT": crawled_content,
                 "lang": lang
             }
+
+            # 只有当card_number不为None时才添加NUMBER参数
+            if card_number is not None:
+                params["NUMBER"] = card_number
 
             result = workflow.run(params)
 

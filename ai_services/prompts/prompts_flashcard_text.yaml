@@ -6,7 +6,7 @@ basic_card:
   topic:
     zh:
       prompt: |
-        你是一名教育专家，正在为主题"[TOPIC]"制作Anki闪卡。请生成[NUMBER]组独特的问答对。每个问题应简明（15字以内），考查单一知识点，适合间隔重复。答案应准确、简短（30字以内），只包含必要信息。避免内容和措辞重复。输出JSON格式：
+        你是一名教育专家，正在为主题"[TOPIC]"制作Anki闪卡。请[NUMBER_INSTRUCTION]独特的问答对。每个问题应简明（15字以内），考查单一知识点，适合间隔重复。答案应准确、简短（30字以内），只包含必要信息。避免内容和措辞重复。输出JSON格式：
         [
           {"question": "问题文本", "answer": "答案文本"},
           ...
@@ -21,7 +21,7 @@ basic_card:
         语言：{lang}
     en:
       prompt: |
-        You are an expert educator creating Anki flashcards for the topic "[TOPIC]". Generate [NUMBER] unique question-answer pairs. Each question should be concise (under 15 words), test a single concept, and be suitable for spaced repetition. Answers should be accurate, brief (under 30 words), and include only essential information. Avoid repetition in concepts or phrasing. Output in JSON format:
+        You are an expert educator creating Anki flashcards for the topic "[TOPIC]". [NUMBER_INSTRUCTION] unique question-answer pairs. Each question should be concise (under 15 words), test a single concept, and be suitable for spaced repetition. Answers should be accurate, brief (under 30 words), and include only essential information. Avoid repetition in concepts or phrasing. Output in JSON format:
         [
           {"question": "Question text", "answer": "Answer text"},
           ...
@@ -37,12 +37,12 @@ basic_card:
   full:
     zh:
       prompt: |
-        你是一名教育专家，正在基于用户提供的文本内容制作Anki闪卡。请仔细阅读以下文本内容，并生成[NUMBER]组独特的问答对。每个问题应简明（15字以内），考查文本中的关键知识点，适合间隔重复。答案应准确、简短（30字以内），只包含必要信息。避免内容和措辞重复。
+        你是一名教育专家，正在基于用户提供的文本内容制作Anki闪卡。请仔细阅读以下文本内容，并[NUMBER_INSTRUCTION]独特的问答对。每个问题应简明（15字以内），考查文本中的关键知识点，适合间隔重复。答案应准确、简短（30字以内），只包含必要信息。避免内容和措辞重复。
 
         文本内容：
         [TEXT_CONTENT]
 
-        请基于以上文本内容生成[NUMBER]组问答对，输出JSON格式：
+        请基于以上文本内容[NUMBER_INSTRUCTION]问答对，输出JSON格式：
         [
           {"question": "问题文本", "answer": "答案文本"},
           ...
@@ -50,12 +50,12 @@ basic_card:
         语言：{lang}
     en:
       prompt: |
-        You are an expert educator creating Anki flashcards based on user-provided text content. Please carefully read the following text and generate [NUMBER] unique question-answer pairs. Each question should be concise (under 15 words), test key concepts from the text, and be suitable for spaced repetition. Answers should be accurate, brief (under 30 words), and include only essential information. Avoid repetition in concepts or phrasing.
+        You are an expert educator creating Anki flashcards based on user-provided text content. Please carefully read the following text and [NUMBER_INSTRUCTION] unique question-answer pairs. Each question should be concise (under 15 words), test key concepts from the text, and be suitable for spaced repetition. Answers should be accurate, brief (under 30 words), and include only essential information. Avoid repetition in concepts or phrasing.
 
         Text content:
         [TEXT_CONTENT]
 
-        Please generate [NUMBER] question-answer pairs based on the above text. Output in JSON format:
+        Please [NUMBER_INSTRUCTION] question-answer pairs based on the above text. Output in JSON format:
         [
           {"question": "Question text", "answer": "Answer text"},
           ...
@@ -66,12 +66,12 @@ basic_card:
   section:
     zh:
       prompt: |
-        你是一名教育专家，正在为"[SECTION_TITLE]"这一章节制作Anki闪卡。请仔细阅读以下文本内容（包含完整的学习材料），并针对"[SECTION_TITLE]"这一章节的知识点生成[NUMBER]组独特的问答对。每个问题应简明（15字以内），考查该章节的关键知识点，适合间隔重复。答案应准确、简短（30字以内），只包含必要信息。避免内容和措辞重复。
+        你是一名教育专家，正在为"[SECTION_TITLE]"这一章节制作Anki闪卡。请仔细阅读以下文本内容（包含完整的学习材料），并针对"[SECTION_TITLE]"这一章节的知识点[NUMBER_INSTRUCTION]独特的问答对。每个问题应简明（15字以内），考查该章节的关键知识点，适合间隔重复。答案应准确、简短（30字以内），只包含必要信息。避免内容和措辞重复。
 
         完整文本内容：
         [TEXT_CONTENT]
 
-        请针对章节"[SECTION_TITLE]"生成[NUMBER]组问答对，输出JSON格式：
+        请针对章节"[SECTION_TITLE]"[NUMBER_INSTRUCTION]问答对，输出JSON格式：
         [
           {"question": "问题文本", "answer": "答案文本"},
           ...
@@ -79,12 +79,12 @@ basic_card:
         语言：{lang}
     en:
       prompt: |
-        You are an expert educator creating Anki flashcards for the section "[SECTION_TITLE]". Please carefully read the following text content (containing complete learning materials) and generate [NUMBER] unique question-answer pairs specifically for the "[SECTION_TITLE]" section. Each question should be concise (under 15 words), test key concepts from this section, and be suitable for spaced repetition. Answers should be accurate, brief (under 30 words), and include only essential information. Avoid repetition in concepts or phrasing.
+        You are an expert educator creating Anki flashcards for the section "[SECTION_TITLE]". Please carefully read the following text content (containing complete learning materials) and [NUMBER_INSTRUCTION] unique question-answer pairs specifically for the "[SECTION_TITLE]" section. Each question should be concise (under 15 words), test key concepts from this section, and be suitable for spaced repetition. Answers should be accurate, brief (under 30 words), and include only essential information. Avoid repetition in concepts or phrasing.
 
         Complete text content:
         [TEXT_CONTENT]
 
-        Please generate [NUMBER] question-answer pairs for section "[SECTION_TITLE]". Output in JSON format:
+        Please [NUMBER_INSTRUCTION] question-answer pairs for section "[SECTION_TITLE]". Output in JSON format:
         [
           {"question": "Question text", "answer": "Answer text"},
           ...
@@ -96,7 +96,7 @@ cloze_card:
   topic:
     zh:
       prompt: |
-        针对主题"[TOPIC]"，生成[NUMBER]个Anki填空（cloze deletion）闪卡。每张卡片为一句话，使用{{c1::术语}}格式遮蔽一个关键术语。句子简明（20字以内），考查不同知识点，避免内容重叠。输出JSON格式：
+        针对主题"[TOPIC]"，[NUMBER_INSTRUCTION]Anki填空（cloze deletion）闪卡。每张卡片为一句话，使用{{c1::术语}}格式遮蔽一个关键术语。句子简明（20字以内），考查不同知识点，避免内容重叠。输出JSON格式：
         [
           {"cloze": "句子含{{c1::术语}}"},
           ...
@@ -111,7 +111,7 @@ cloze_card:
         语言：{lang}
     en:
       prompt: |
-        Create [NUMBER] cloze deletion Anki flashcards for the topic "[TOPIC]". Each card should have a single sentence with one key term or phrase blanked out using {{c1::term}}. Ensure sentences are concise (under 20 words), test distinct concepts, and avoid overlapping content. Output in JSON format:
+        [NUMBER_INSTRUCTION] cloze deletion Anki flashcards for the topic "[TOPIC]". Each card should have a single sentence with one key term or phrase blanked out using {{c1::term}}. Ensure sentences are concise (under 20 words), test distinct concepts, and avoid overlapping content. Output in JSON format:
         [
           {"cloze": "Sentence with {{c1::term}}"},
           ...
@@ -127,12 +127,12 @@ cloze_card:
   full:
     zh:
       prompt: |
-        基于以下文本内容，生成[NUMBER]个Anki填空（cloze deletion）闪卡。每张卡片为一句话，使用{{c1::术语}}格式遮蔽一个关键术语。句子简明（20字以内），考查文本中的关键知识点，避免内容重叠。
+        基于以下文本内容，[NUMBER_INSTRUCTION]Anki填空（cloze deletion）闪卡。每张卡片为一句话，使用{{c1::术语}}格式遮蔽一个关键术语。句子简明（20字以内），考查文本中的关键知识点，避免内容重叠。
 
         文本内容：
         [TEXT_CONTENT]
 
-        请基于以上文本内容生成[NUMBER]个填空卡片，输出JSON格式：
+        请基于以上文本内容[NUMBER_INSTRUCTION]填空卡片，输出JSON格式：
         [
           {"cloze": "句子含{{c1::术语}}"},
           ...
@@ -140,12 +140,12 @@ cloze_card:
         语言：{lang}
     en:
       prompt: |
-        Based on the following text content, create [NUMBER] cloze deletion Anki flashcards. Each card should have a single sentence with one key term or phrase blanked out using {{c1::term}}. Ensure sentences are concise (under 20 words), test key concepts from the text, and avoid overlapping content.
+        Based on the following text content, [NUMBER_INSTRUCTION] cloze deletion Anki flashcards. Each card should have a single sentence with one key term or phrase blanked out using {{c1::term}}. Ensure sentences are concise (under 20 words), test key concepts from the text, and avoid overlapping content.
 
         Text content:
         [TEXT_CONTENT]
 
-        Please generate [NUMBER] cloze cards based on the above text. Output in JSON format:
+        Please [NUMBER_INSTRUCTION] cloze cards based on the above text. Output in JSON format:
         [
           {"cloze": "Sentence with {{c1::term}}"},
           ...
@@ -156,12 +156,12 @@ cloze_card:
   section:
     zh:
       prompt: |
-        针对章节"[SECTION_TITLE]"，生成[NUMBER]个Anki填空（cloze deletion）闪卡。请仔细阅读以下完整文本内容，并针对"[SECTION_TITLE]"这一章节生成填空卡片。每张卡片为一句话，使用{{c1::术语}}格式遮蔽一个关键术语。句子简明（20字以内），考查该章节的关键知识点，避免内容重叠。
+        针对章节"[SECTION_TITLE]"，[NUMBER_INSTRUCTION]Anki填空（cloze deletion）闪卡。请仔细阅读以下完整文本内容，并针对"[SECTION_TITLE]"这一章节生成填空卡片。每张卡片为一句话，使用{{c1::术语}}格式遮蔽一个关键术语。句子简明（20字以内），考查该章节的关键知识点，避免内容重叠。
 
         完整文本内容：
         [TEXT_CONTENT]
 
-        请针对章节"[SECTION_TITLE]"生成[NUMBER]个填空卡片，输出JSON格式：
+        请针对章节"[SECTION_TITLE]"[NUMBER_INSTRUCTION]填空卡片，输出JSON格式：
         [
           {"cloze": "句子含{{c1::术语}}"},
           ...
@@ -169,12 +169,12 @@ cloze_card:
         语言：{lang}
     en:
       prompt: |
-        For section "[SECTION_TITLE]", create [NUMBER] cloze deletion Anki flashcards. Please carefully read the following complete text content and generate cloze cards specifically for the "[SECTION_TITLE]" section. Each card should have a single sentence with one key term or phrase blanked out using {{c1::term}}. Ensure sentences are concise (under 20 words), test key concepts from this section, and avoid overlapping content.
+        For section "[SECTION_TITLE]", [NUMBER_INSTRUCTION] cloze deletion Anki flashcards. Please carefully read the following complete text content and generate cloze cards specifically for the "[SECTION_TITLE]" section. Each card should have a single sentence with one key term or phrase blanked out using {{c1::term}}. Ensure sentences are concise (under 20 words), test key concepts from this section, and avoid overlapping content.
 
         Complete text content:
         [TEXT_CONTENT]
 
-        Please generate [NUMBER] cloze cards for section "[SECTION_TITLE]". Output in JSON format:
+        Please [NUMBER_INSTRUCTION] cloze cards for section "[SECTION_TITLE]". Output in JSON format:
         [
           {"cloze": "Sentence with {{c1::term}}"},
           ...
@@ -186,7 +186,7 @@ multiple_choice_card:
   topic:
     zh:
       prompt: |
-        针对主题"[TOPIC]"，生成[NUMBER]个Anki多选题闪卡。每题4个选项，1个正确答案，考查不同知识点。问题简明（15字以内），选项清晰。输出JSON格式：
+        针对主题"[TOPIC]"，[NUMBER_INSTRUCTION]Anki多选题闪卡。每题4个选项，1个正确答案，考查不同知识点。问题简明（15字以内），选项清晰。输出JSON格式：
         [
           {
             "question": "问题文本",
@@ -208,7 +208,7 @@ multiple_choice_card:
         语言：{lang}
     en:
       prompt: |
-        Generate [NUMBER] multiple-choice Anki flashcards for the topic "[TOPIC]". Each question should have 4 options, one correct answer, and test a unique concept. Questions should be concise (under 15 words), and options clear and distinct. Output in JSON format:
+        [NUMBER_INSTRUCTION] multiple-choice Anki flashcards for the topic "[TOPIC]". Each question should have 4 options, one correct answer, and test a unique concept. Questions should be concise (under 15 words), and options clear and distinct. Output in JSON format:
         [
           {
             "question": "Question text",
@@ -231,12 +231,12 @@ multiple_choice_card:
   full:
     zh:
       prompt: |
-        基于以下文本内容，生成[NUMBER]个Anki多选题闪卡。每题4个选项，1个正确答案，考查文本中的关键知识点。问题简明（15字以内），选项清晰。
+        基于以下文本内容，[NUMBER_INSTRUCTION]Anki多选题闪卡。每题4个选项，1个正确答案，考查文本中的关键知识点。问题简明（15字以内），选项清晰。
 
         文本内容：
         [TEXT_CONTENT]
 
-        请基于以上文本内容生成[NUMBER]个多选题，输出JSON格式：
+        请基于以上文本内容[NUMBER_INSTRUCTION]多选题，输出JSON格式：
         [
           {
             "question": "问题文本",
@@ -248,12 +248,12 @@ multiple_choice_card:
         语言：{lang}
     en:
       prompt: |
-        Based on the following text content, generate [NUMBER] multiple-choice Anki flashcards. Each question should have 4 options, one correct answer, and test key concepts from the text. Questions should be concise (under 15 words), and options clear and distinct.
+        Based on the following text content, [NUMBER_INSTRUCTION] multiple-choice Anki flashcards. Each question should have 4 options, one correct answer, and test key concepts from the text. Questions should be concise (under 15 words), and options clear and distinct.
 
         Text content:
         [TEXT_CONTENT]
 
-        Please generate [NUMBER] multiple-choice questions based on the above text. Output in JSON format:
+        Please [NUMBER_INSTRUCTION] multiple-choice questions based on the above text. Output in JSON format:
         [
           {
             "question": "Question text",
@@ -268,12 +268,12 @@ multiple_choice_card:
   section:
     zh:
       prompt: |
-        针对章节"[SECTION_TITLE]"，生成[NUMBER]个Anki多选题闪卡。请仔细阅读以下完整文本内容，并针对"[SECTION_TITLE]"这一章节生成多选题。每题4个选项，1个正确答案，考查该章节的关键知识点。问题简明（15字以内），选项清晰。
+        针对章节"[SECTION_TITLE]"，[NUMBER_INSTRUCTION]Anki多选题闪卡。请仔细阅读以下完整文本内容，并针对"[SECTION_TITLE]"这一章节生成多选题。每题4个选项，1个正确答案，考查该章节的关键知识点。问题简明（15字以内），选项清晰。
 
         完整文本内容：
         [TEXT_CONTENT]
 
-        请针对章节"[SECTION_TITLE]"生成[NUMBER]个多选题，输出JSON格式：
+        请针对章节"[SECTION_TITLE]"[NUMBER_INSTRUCTION]多选题，输出JSON格式：
         [
           {
             "question": "问题文本",
@@ -285,12 +285,12 @@ multiple_choice_card:
         语言：{lang}
     en:
       prompt: |
-        For section "[SECTION_TITLE]", generate [NUMBER] multiple-choice Anki flashcards. Please carefully read the following complete text content and generate multiple-choice questions specifically for the "[SECTION_TITLE]" section. Each question should have 4 options, one correct answer, and test key concepts from this section. Questions should be concise (under 15 words), and options clear and distinct.
+        For section "[SECTION_TITLE]", [NUMBER_INSTRUCTION] multiple-choice Anki flashcards. Please carefully read the following complete text content and generate multiple-choice questions specifically for the "[SECTION_TITLE]" section. Each question should have 4 options, one correct answer, and test key concepts from this section. Questions should be concise (under 15 words), and options clear and distinct.
 
         Complete text content:
         [TEXT_CONTENT]
 
-        Please generate [NUMBER] multiple-choice questions for section "[SECTION_TITLE]". Output in JSON format:
+        Please [NUMBER_INSTRUCTION] multiple-choice questions for section "[SECTION_TITLE]". Output in JSON format:
         [
           {
             "question": "Question text",
