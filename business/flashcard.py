@@ -161,4 +161,102 @@ class FlashcardBusiness:
                 "success": False,
                 "error": str(e),
                 "cards": []
+            }
+
+    def generate_flashcards_from_url(self, url, card_number=10, lang="zh"):
+        """
+        根据URL爬取网页内容并生成闪卡列表。
+
+        Args:
+            url: 网页URL地址
+            card_number: 需要生成的闪卡数量，默认10张
+            lang: 语言，默认中文(zh)
+
+        Returns:
+            dict: 包含生成结果的字典
+                - success: 是否成功
+                - cards: 闪卡列表
+                - error: 错误信息（如果失败）
+                - crawled_content: 爬取到的网页内容（可选，用于调试）
+        """
+        self.logger.info(f"根据URL生成闪卡: url={url}, card_number={card_number}, lang={lang}")
+
+        if not url or not url.strip():
+            self.logger.error("URL为空")
+            return {
+                "success": False,
+                "error": "URL不能为空",
+                "cards": []
+            }
+
+        # 验证URL格式
+        if not url.startswith(('http://', 'https://')):
+            self.logger.error(f"URL格式不正确: {url}")
+            return {
+                "success": False,
+                "error": "URL格式不正确，必须以 http:// 或 https:// 开头",
+                "cards": []
+            }
+
+        try:
+            # 使用web_crawl爬取网页内容
+            import asyncio
+            from ai_services.crawl.web_crawl import crawl_web_content
+
+            self.logger.info(f"开始爬取网页: {url}")
+
+            # 运行异步爬虫获取markdown格式内容
+            crawled_content = asyncio.run(crawl_web_content(url, "markdown"))
+
+            if not crawled_content or not crawled_content.strip():
+                self.logger.error("爬取到的网页内容为空")
+                return {
+                    "success": False,
+                    "error": "无法获取网页内容或网页内容为空",
+                    "cards": []
+                }
+
+            self.logger.info(f"成功爬取网页内容，长度: {len(crawled_content)}")
+
+            # 使用FlashcardGenerateWorkflow生成闪卡
+            workflow = FlashcardGenerateWorkflow(card_type="basic_card", ai_service=self.ai_service)
+
+            # 构建参数 - 将爬取的内容作为主题
+            params = {
+                "TOPIC": crawled_content,
+                "NUMBER": card_number,
+                "lang": lang
+            }
+
+            result = workflow.run(params)
+
+            if isinstance(result, list):
+                self.logger.info(f"URL闪卡生成成功: 获取到{len(result)}张闪卡")
+                return {
+                    "success": True,
+                    "cards": result,
+                    "url": url,
+                    "crawled_length": len(crawled_content)
+                }
+            else:
+                self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
+                return {
+                    "success": False,
+                    "error": "AI返回格式错误",
+                    "cards": []
+                }
+
+        except ImportError as e:
+            self.logger.error(f"导入爬虫模块失败: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": "爬虫模块未安装，请先安装 crawl4ai 库",
+                "cards": []
+            }
+        except Exception as e:
+            self.logger.error(f"URL闪卡生成失败: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": f"处理失败: {str(e)}",
+                "cards": []
             } 
