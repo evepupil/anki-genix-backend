@@ -1,0 +1,120 @@
+# 文件输入的大纲生成提示词
+# 支持两种模式：话题(topic)、全文(full)
+# 文件会作为附件上传，AI可以直接读取文件内容
+
+catalog_analysis:
+  # 话题模式：用户提供主题，AI根据主题知识生成大纲（与文件内容无关）
+  topic:
+    zh:
+      prompt: |
+        你是一名知识结构专家。请分析主题"[TOPIC]"，生成一个系统化、结构化的知识目录。目录应该：
+        1. 有清晰的层级结构（最多3层）
+        2. 每个章节有简短的描述（不超过30字）
+        3. 内容全面且逻辑合理
+
+        输出格式必须是JSON，层级结构如下：
+        ```
+        [
+          {
+            "chapter": "章节名称",
+            "description": "章节简短描述",
+            "sections": [
+              {
+                "section": "小节名称",
+                "description": "小节简短描述",
+                "subsections": [
+                  {"subsection": "子小节名称", "description": "子小节简短描述"}
+                ]
+              }
+            ]
+          }
+        ]
+        ```
+
+        语言：{lang}
+    en:
+      prompt: |
+        You are a knowledge structure expert. Please analyze the topic "[TOPIC]" and generate a systematic, structured knowledge catalog. The catalog should:
+        1. Have a clear hierarchical structure (maximum 3 levels)
+        2. Each section should have a brief description (not exceeding 30 words)
+        3. Be comprehensive and logically organized
+
+        Output must be in JSON format with the following hierarchical structure:
+        ```
+        [
+          {
+            "chapter": "Chapter name",
+            "description": "Brief chapter description",
+            "sections": [
+              {
+                "section": "Section name",
+                "description": "Brief section description",
+                "subsections": [
+                  {"subsection": "Subsection name", "description": "Brief subsection description"}
+                ]
+              }
+            ]
+          }
+        ]
+        ```
+
+        Language: {lang}
+
+  # 全文模式：AI读取用户上传的文件内容，分析文件结构生成大纲
+  full:
+    zh:
+      prompt: |
+        你是一名知识结构专家。我已经上传了一个文件，请仔细阅读文件内容，分析其知识结构，生成一个系统化、结构化的知识目录。目录应该：
+        1. 准确反映文件的实际内容和结构
+        2. 有清晰的层级结构（最多3层）
+        3. 每个章节有简短的描述（不超过30字）
+        4. 内容全面且逻辑合理
+
+        请基于上传的文件内容生成知识目录。输出格式必须是JSON，层级结构如下：
+        ```
+        [
+          {
+            "chapter": "章节名称",
+            "description": "章节简短描述",
+            "sections": [
+              {
+                "section": "小节名称",
+                "description": "小节简短描述",
+                "subsections": [
+                  {"subsection": "子小节名称", "description": "子小节简短描述"}
+                ]
+              }
+            ]
+          }
+        ]
+        ```
+
+        语言：{lang}
+    en:
+      prompt: |
+        You are a knowledge structure expert. I have uploaded a file. Please carefully read the file content, analyze its knowledge structure, and generate a systematic, structured knowledge catalog. The catalog should:
+        1. Accurately reflect the actual content and structure of the file
+        2. Have a clear hierarchical structure (maximum 3 levels)
+        3. Each section should have a brief description (not exceeding 30 words)
+        4. Be comprehensive and logically organized
+
+        Please generate a knowledge catalog based on the uploaded file content. Output must be in JSON format with the following hierarchical structure:
+        ```
+        [
+          {
+            "chapter": "Chapter name",
+            "description": "Brief chapter description",
+            "sections": [
+              {
+                "section": "Section name",
+                "description": "Brief section description",
+                "subsections": [
+                  {"subsection": "Subsection name", "description": "Brief subsection description"}
+                ]
+              }
+            ]
+          }
+        ]
+        ```
+
+        Language: {lang}

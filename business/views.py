@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.files.storage import default_storage
 from business.flashcard import FlashcardBusiness
+from business.catalog import CatalogService
 from utils.logger import get_logger
 
 logger = get_logger(name="api.views")
@@ -279,3 +280,233 @@ def health_check(request):
         'status': 'ok',
         'service': 'ankigenix-backend'
     })
+
+
+# ============ 大纲生成接口 ============
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def analyze_catalog_from_topic(request):
+    """
+    API接口：基于话题生成知识大纲
+
+    请求方法: POST
+    请求体 (JSON):
+    {
+        "topic": "学习主题，如'Python编程基础'",
+        "lang": "zh"  # 可选，默认中文 (zh/en/ja)
+    }
+
+    响应 (JSON):
+    {
+        "success": true,
+        "catalog": [
+            {
+                "chapter": "章节名称",
+                "description": "章节描述",
+                "sections": [
+                    {
+                        "section": "小节名称",
+                        "description": "小节描述",
+                        "subsections": [
+                            {"subsection": "子小节名称", "description": "子小节描述"}
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+    """
+    try:
+        # 解析请求数据
+        data = json.loads(request.body)
+        topic = data.get('topic', '').strip()
+        lang = data.get('lang', 'zh')
+
+        logger.info(f"收到话题大纲生成请求，话题: {topic}, 语言: {lang}")
+
+        # 验证输入
+        if not topic:
+            logger.warning("话题为空")
+            return JsonResponse({
+                'success': False,
+                'error': '请提供学习主题'
+            }, status=400)
+
+        # 调用业务层生成大纲
+        catalog_service = CatalogService()
+        catalog = catalog_service.analyze_catalog_from_topic(topic, lang)
+
+        # 返回结果
+        logger.info(f"成功生成大纲 - 话题: {topic}")
+        return JsonResponse({
+            'success': True,
+            'catalog': catalog
+        })
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON解析错误: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': '请求数据格式错误'
+        }, status=400)
+
+    except Exception as e:
+        logger.error(f"API处理异常: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': '服务器内部错误'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def analyze_catalog_from_text(request):
+    """
+    API接口：基于文本内容生成知识大纲
+
+    请求方法: POST
+    请求体 (JSON):
+    {
+        "text": "完整的文本内容",
+        "lang": "zh"  # 可选，默认中文 (zh/en/ja)
+    }
+
+    响应 (JSON):
+    {
+        "success": true,
+        "catalog": [
+            {
+                "chapter": "章节名称",
+                "description": "章节描述",
+                "sections": [...]
+            }
+        ]
+    }
+    """
+    try:
+        # 解析请求数据
+        data = json.loads(request.body)
+        text_content = data.get('text', '').strip()
+        lang = data.get('lang', 'zh')
+
+        logger.info(f"收到文本大纲生成请求，文本长度: {len(text_content)}, 语言: {lang}")
+
+        # 验证输入
+        if not text_content:
+            logger.warning("文本内容为空")
+            return JsonResponse({
+                'success': False,
+                'error': '请提供文本内容'
+            }, status=400)
+
+        # 调用业务层生成大纲
+        catalog_service = CatalogService()
+        catalog = catalog_service.analyze_catalog_from_text(text_content, lang)
+
+        # 返回结果
+        logger.info(f"成功生成大纲 - 文本长度: {len(text_content)}")
+        return JsonResponse({
+            'success': True,
+            'catalog': catalog
+        })
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON解析错误: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': '请求数据格式错误'
+        }, status=400)
+
+    except Exception as e:
+        logger.error(f"API处理异常: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': '服务器内部错误'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def analyze_catalog_from_file(request):
+    """
+    API接口：基于上传文件生成知识大纲
+
+    请求方法: POST
+    Content-Type: multipart/form-data
+    请求体:
+    - file: 上传的文件
+    - lang: 语言 (可选，默认zh)
+
+    响应 (JSON):
+    {
+        "success": true,
+        "catalog": [
+            {
+                "chapter": "章节名称",
+                "description": "章节描述",
+                "sections": [...]
+            }
+        ],
+        "file_name": "example.pdf"
+    }
+    """
+    try:
+        # 检查是否有文件上传
+        if 'file' not in request.FILES:
+            logger.warning("未找到上传的文件")
+            return JsonResponse({
+                'success': False,
+                'error': '请上传文件'
+            }, status=400)
+
+        uploaded_file = request.FILES['file']
+        file_name = uploaded_file.name
+        lang = request.POST.get('lang', 'zh')
+
+        logger.info(f"收到文件大纲生成请求，文件名: {file_name}, 大小: {uploaded_file.size} bytes, 语言: {lang}")
+
+        # 文件大小限制（10MB）
+        max_size = 10 * 1024 * 1024
+        if uploaded_file.size > max_size:
+            logger.warning(f"文件过大: {uploaded_file.size} bytes")
+            return JsonResponse({
+                'success': False,
+                'error': f'文件大小不能超过 {max_size // (1024*1024)}MB'
+            }, status=400)
+
+        # 保存文件到临时目录
+        temp_dir = tempfile.gettempdir()
+        temp_file_path = os.path.join(temp_dir, file_name)
+
+        with open(temp_file_path, 'wb+') as destination:
+            for chunk in uploaded_file.chunks():
+                destination.write(chunk)
+
+        logger.info(f"文件已保存至临时路径: {temp_file_path}")
+
+        try:
+            # 调用业务层生成大纲
+            catalog_service = CatalogService()
+            catalog = catalog_service.analyze_catalog_from_file(temp_file_path, lang)
+
+            # 返回结果
+            logger.info(f"成功生成大纲 - 文件: {file_name}")
+            return JsonResponse({
+                'success': True,
+                'catalog': catalog,
+                'file_name': file_name
+            })
+
+        finally:
+            # 清理临时文件
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+                logger.debug(f"已删除临时文件: {temp_file_path}")
+
+    except Exception as e:
+        logger.error(f"API处理异常: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': '服务器内部错误'
+        }, status=500)
