@@ -24,6 +24,11 @@ class CatalogService:
         参数:
             ai_service: AI服务实例，如果不提供则使用默认服务
         """
+        if ai_service is None:
+            # 如果没有提供 ai_service，使用默认的 DeepseekAIService
+            from ai_services.ai_deepseek import DeepseekAIService
+            ai_service = DeepseekAIService()
+
         self.ai_service = ai_service
         self.logger = logger
 
@@ -106,29 +111,15 @@ class CatalogService:
             # 使用 full 模式，file 形式
             workflow = CatalogAnalysisWorkflow(form="file", mode="full", ai_service=self.ai_service)
 
-            # 读取文件内容
-            with open(file_path, 'r', encoding='utf-8') as f:
-                file_content = f.read()
+            # 构建参数
+            params = {
+                "lang": lang
+            }
 
-            # 对于文件上传，AI服务需要支持文件输入
-            # 这里使用 chat_with_files 方法（如果AI服务支持）
-            if hasattr(self.ai_service, 'chat_with_files') and callable(getattr(self.ai_service, 'chat_with_files')):
-                params = {
-                    "lang": lang
-                }
-                prompt = workflow.build_prompt(params)
-                ai_result = self.ai_service.chat_with_files(prompt, [file_path])
-                catalog = workflow.parse_result(ai_result)
-            else:
-                # 如果AI服务不支持文件上传，则将文件内容作为文本处理
-                self.logger.warning("AI服务不支持文件上传，将文件内容作为文本处理")
-                params = {
-                    "TEXT_CONTENT": file_content,
-                    "lang": lang
-                }
-                # 临时切换到 text 形式
-                workflow.form = "text"
-                catalog = workflow.run(params)
+            # 使用AI服务的 chat_with_files 方法上传文件
+            prompt = workflow.build_prompt(params)
+            ai_result = self.ai_service.chat_with_files(prompt, [file_path])
+            catalog = workflow.parse_result(ai_result)
 
             self.logger.info(f"大纲生成成功 - 文件: {file_path}")
 
