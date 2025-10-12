@@ -15,13 +15,30 @@ class AIWorkflow:
         return DeepseekAIService()
 
     def build_prompt(self, params: dict) -> str:
+        """
+        构建提示词
+
+        参数:
+            params: 提示词参数字典，包含：
+                - lang: 语言 (zh, en, ja)
+                - form: 输入形式 (text, file) - 仅用于闪卡生成
+                - mode: 生成模式 (topic, full, section) - 仅用于闪卡生成
+                - 其他动态占位符参数 (如 TOPIC, TEXT_CONTENT, SECTION_TITLE, FILENAME 等)
+
+        返回:
+            填充好参数的提示词字符串
+        """
         lang = params.get("lang", "zh")
-        prompt_template = load_prompt(self.prompt_key, lang)["prompt"]
+        form = getattr(self, 'form', params.get('form', 'text'))
+        mode = getattr(self, 'mode', params.get('mode', 'topic'))
+
+        # 加载提示词模板
+        prompt_template = load_prompt(self.prompt_key, lang, form, mode)["prompt"]
 
         # 替换占位符，格式为 [KEY]
         prompt = prompt_template
         for k, v in params.items():
-            if k != "lang":  # 跳过lang参数，它用于{lang}占位符
+            if k not in ["lang", "form", "mode"]:  # 跳过这些元参数
                 placeholder = f"[{k}]"
                 prompt = prompt.replace(placeholder, str(v))
 
