@@ -292,4 +292,180 @@ class FlashcardBusiness:
                 "success": False,
                 "error": f"处理失败: {str(e)}",
                 "cards": []
+            }
+
+    def generate_flashcards_from_text_section(self, text_content, section_title, card_number=None, lang="zh"):
+        """
+        根据文本内容和指定章节生成闪卡列表。
+
+        Args:
+            text_content: 完整的学习材料文本
+            section_title: 章节标题，如"第三章：Python数据类型"
+            card_number: 卡片数量（可选，不提供则由AI智能决定）
+            lang: 语言，默认中文(zh)
+
+        Returns:
+            dict: 包含生成结果的字典
+                - success: 是否成功
+                - cards: 闪卡列表
+                - error: 错误信息（如果失败）
+        """
+        self.logger.info(f"根据文本章节生成闪卡，章节: {section_title}, 文本长度: {len(text_content) if text_content else 0}, 数量: {card_number or '智能'}, 语言: {lang}")
+
+        if not text_content or not text_content.strip():
+            self.logger.error("文本内容为空")
+            return {
+                "success": False,
+                "error": "文本内容不能为空",
+                "cards": []
+            }
+
+        if not section_title or not section_title.strip():
+            self.logger.error("章节标题为空")
+            return {
+                "success": False,
+                "error": "章节标题不能为空",
+                "cards": []
+            }
+
+        try:
+            # 使用章节模式，文本形式
+            workflow = FlashcardGenerateWorkflow(
+                card_type="basic_card",
+                form="text",
+                mode="section",
+                ai_service=self.ai_service
+            )
+
+            # 构建参数
+            params = {
+                "TEXT_CONTENT": text_content,
+                "SECTION_TITLE": section_title,
+                "lang": lang
+            }
+
+            # 只有当card_number不为None时才添加NUMBER参数
+            if card_number is not None:
+                params["NUMBER"] = card_number
+
+            result = workflow.run(params)
+
+            if isinstance(result, list):
+                self.logger.info(f"章节闪卡生成成功: 获取到{len(result)}张闪卡 - 章节: {section_title}")
+                return {
+                    "success": True,
+                    "cards": result,
+                    "section_title": section_title
+                }
+            else:
+                self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
+                return {
+                    "success": False,
+                    "error": "AI返回格式错误",
+                    "cards": []
+                }
+
+        except Exception as e:
+            self.logger.error(f"章节闪卡生成失败 - 章节: {section_title}, 错误: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "cards": []
+            }
+
+    def generate_flashcards_from_file_section(self, file_path, section_title, card_number=None, lang="zh"):
+        """
+        根据文件和指定章节生成闪卡列表。
+
+        Args:
+            file_path: 文件路径
+            section_title: 章节标题，如"第三章：Python数据类型"
+            card_number: 卡片数量（可选，不提供则由AI智能决定）
+            lang: 语言，默认中文(zh)
+
+        Returns:
+            dict: 包含生成结果的字典
+                - success: 是否成功
+                - cards: 闪卡列表
+                - error: 错误信息（如果失败）
+        """
+        self.logger.info(f"根据文件章节生成闪卡: {file_path}, 章节: {section_title}, 数量: {card_number or '智能'}, 语言: {lang}")
+
+        if not file_path:
+            self.logger.error("文件路径为空")
+            return {
+                "success": False,
+                "error": "文件路径不能为空",
+                "cards": []
+            }
+
+        if not section_title or not section_title.strip():
+            self.logger.error("章节标题为空")
+            return {
+                "success": False,
+                "error": "章节标题不能为空",
+                "cards": []
+            }
+
+        try:
+            import os
+            if not os.path.exists(file_path):
+                self.logger.error(f"文件不存在: {file_path}")
+                return {
+                    "success": False,
+                    "error": "文件不存在",
+                    "cards": []
+                }
+
+            # 使用章节模式，文件形式
+            workflow = FlashcardGenerateWorkflow(
+                card_type="basic_card",
+                form="file",
+                mode="section",
+                ai_service=self.ai_service
+            )
+
+            # 获取文件名（用于提示词）
+            file_name = os.path.basename(file_path)
+
+            # 构建参数
+            params = {
+                "FILENAME": file_name,
+                "SECTION_TITLE": section_title,
+                "lang": lang
+            }
+
+            # 只有当card_number不为None时才添加NUMBER参数
+            if card_number is not None:
+                params["NUMBER"] = card_number
+
+            # 使用AI服务的chat_with_files方法
+            prompt = workflow.build_prompt(params)
+            ai_result = self.ai_service.chat_with_files(prompt, [file_path])
+
+            # 解析结果
+            result = workflow.parse_result(ai_result)
+
+            if isinstance(result, list):
+                self.logger.info(f"文件章节闪卡生成成功: 获取到{len(result)}张闪卡 - 文件: {file_name}, 章节: {section_title}")
+                return {
+                    "success": True,
+                    "cards": result,
+                    "section_title": section_title,
+                    "file_name": file_name
+                }
+            else:
+                self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
+                return {
+                    "success": False,
+                    "error": "AI返回格式错误",
+                    "cards": []
+                }
+
+        except Exception as e:
+            self.logger.error(f"文件章节闪卡生成失败 - 文件: {file_path}, 章节: {section_title}, 错误: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "cards": []
             } 
