@@ -8,6 +8,9 @@ zappa>=0.56.0
 # Anki导出依赖
 genanki>=0.13.0
 
+# Supabase客户端
+supabase>=2.0.0
+
 # 工具依赖
 pyyaml>=6.0
 python-dotenv>=1.0.0

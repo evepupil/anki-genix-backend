@@ -21,6 +21,7 @@ def generate_flashcards_from_text(request):
     请求方法: POST
     请求体 (JSON):
     {
+        "task_id": "任务ID（必填）",
         "text": "要学习的文本内容",
         "card_number": 10,  # 可选，不提供则由AI智能决定数量
         "lang": "zh"  # 可选，默认中文
@@ -41,13 +42,38 @@ def generate_flashcards_from_text(request):
     try:
         # 解析请求数据
         data = json.loads(request.body)
+        task_id = data.get('task_id', '').strip()
         text_content = data.get('text', '').strip()
         card_number = data.get('card_number', None)  # 可选，None表示智能模式
         lang = data.get('lang', 'zh')
 
-        logger.info(f"收到文本闪卡生成请求，文本长度: {len(text_content)}, 数量: {card_number or '智能'}, 语言: {lang}")
+        logger.info(f"收到文本闪卡生成请求，task_id={task_id}, 文本长度: {len(text_content)}, 数量: {card_number or '智能'}, 语言: {lang}")
 
-        # 验证输入
+        # 1. 验证 task_id 是否提供
+        if not task_id:
+            logger.warning("task_id未提供")
+            return JsonResponse({
+                'success': False,
+                'error': 'task_id为必填参数'
+            }, status=400)
+
+        # 2. 验证任务是否存在且合法
+        from business.task_manager import TaskManager
+        task_mgr = TaskManager()
+
+        validation = task_mgr.validate_task(
+            task_id=task_id,
+            expected_task_type="text"  # 验证输入类型为 text
+        )
+
+        if not validation['valid']:
+            logger.warning(f"任务验证失败: {validation['error']}")
+            return JsonResponse({
+                'success': False,
+                'error': validation['error']
+            }, status=400)
+
+        # 3. 验证文本内容
         if not text_content:
             logger.warning("文本内容为空")
             return JsonResponse({
@@ -55,11 +81,25 @@ def generate_flashcards_from_text(request):
                 'error': '请提供要学习的文本内容'
             }, status=400)
 
-        # 调用业务层生成闪卡
-        biz = FlashcardBusiness()
-        result = biz.generate_flashcards_from_text(text_content, card_number, lang)
+        # 4. 验证文本长度是否与任务信息表一致
+        task = validation['task']
+        input_data = task.get('input_data', {})
+        expected_text_length = input_data.get('text_length')
 
-        # 返回结果
+        if expected_text_length is not None:
+            actual_text_length = len(text_content)
+            if actual_text_length != expected_text_length:
+                logger.warning(f"文本长度不匹配: 期望={expected_text_length}, 实际={actual_text_length}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'文本内容长度不匹配，期望: {expected_text_length}, 实际: {actual_text_length}'
+                }, status=400)
+
+        # 4. 调用业务层生成闪卡（会自动更新任务状态）
+        biz = FlashcardBusiness()
+        result = biz.generate_flashcards_from_text(text_content, card_number, lang, task_id)
+
+        # 5. 返回结果
         if result['success']:
             logger.info(f"成功生成 {len(result['cards'])} 张闪卡")
             return JsonResponse({
@@ -198,6 +238,7 @@ def generate_flashcards_from_url(request):
     请求方法: POST
     请求体 (JSON):
     {
+        "task_id": "任务ID（必填）",
         "url": "https://example.com/article",
         "card_number": 10,  # 可选，不提供则由AI智能决定数量
         "lang": "zh"  # 可选，默认中文
@@ -220,13 +261,38 @@ def generate_flashcards_from_url(request):
     try:
         # 解析请求数据
         data = json.loads(request.body)
+        task_id = data.get('task_id', '').strip()
         url = data.get('url', '').strip()
         card_number = data.get('card_number', None)  # 可选，None表示智能模式
         lang = data.get('lang', 'zh')
 
-        logger.info(f"收到URL闪卡生成请求，URL: {url}, 数量: {card_number or '智能'}, 语言: {lang}")
+        logger.info(f"收到URL闪卡生成请求，task_id={task_id}, URL: {url}, 数量: {card_number or '智能'}, 语言: {lang}")
 
-        # 验证输入
+        # 1. 验证 task_id 是否提供
+        if not task_id:
+            logger.warning("task_id未提供")
+            return JsonResponse({
+                'success': False,
+                'error': 'task_id为必填参数'
+            }, status=400)
+
+        # 2. 验证任务是否存在且合法
+        from business.task_manager import TaskManager
+        task_mgr = TaskManager()
+
+        validation = task_mgr.validate_task(
+            task_id=task_id,
+            expected_task_type="web"  # 验证输入类型为 web
+        )
+
+        if not validation['valid']:
+            logger.warning(f"任务验证失败: {validation['error']}")
+            return JsonResponse({
+                'success': False,
+                'error': validation['error']
+            }, status=400)
+
+        # 3. 验证URL
         if not url:
             logger.warning("URL为空")
             return JsonResponse({
@@ -234,7 +300,21 @@ def generate_flashcards_from_url(request):
                 'error': '请提供有效的URL地址'
             }, status=400)
 
-        # 验证card_number参数（如果提供了的话）
+        # 4. 验证URL长度是否与任务信息表一致
+        task = validation['task']
+        input_data = task.get('input_data', {})
+        expected_url_length = input_data.get('url_length')
+
+        if expected_url_length is not None:
+            actual_url_length = len(url)
+            if actual_url_length != expected_url_length:
+                logger.warning(f"URL长度不匹配: 期望={expected_url_length}, 实际={actual_url_length}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'URL长度不匹配，期望: {expected_url_length}, 实际: {actual_url_length}'
+                }, status=400)
+
+        # 5. 验证card_number参数（如果提供了的话）
         if card_number is not None:
             try:
                 card_number = int(card_number)
@@ -251,11 +331,11 @@ def generate_flashcards_from_url(request):
                     'error': '闪卡数量必须是有效的整数'
                 }, status=400)
 
-        # 调用业务层生成闪卡
+        # 6. 调用业务层生成闪卡
         biz = FlashcardBusiness()
         result = biz.generate_flashcards_from_url(url, card_number, lang)
 
-        # 返回结果
+        # 7. 返回结果
         if result['success']:
             logger.info(f"成功从URL生成 {len(result['cards'])} 张闪卡")
             return JsonResponse({

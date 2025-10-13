@@ -120,7 +120,7 @@ class FlashcardBusiness:
                 "error": str(e),
                 "cards": []
             }
-    def generate_flashcards_from_text(self, text_content, card_number=None, lang="zh"):
+    def generate_flashcards_from_text(self, text_content, card_number=None, lang="zh", task_id=None):
         """
         根据文本内容生成闪卡列表。
 
@@ -128,6 +128,7 @@ class FlashcardBusiness:
             text_content: 输入的文本内容
             card_number: 卡片数量（可选，不提供则由AI智能决定）
             lang: 语言，默认中文(zh)
+            task_id: 任务ID（必填，用于状态追踪和验证）
 
         Returns:
             dict: 包含生成结果的字典
@@ -135,10 +136,25 @@ class FlashcardBusiness:
                 - cards: 闪卡列表
                 - error: 错误信息（如果失败）
         """
-        self.logger.info(f"根据文本生成闪卡，文本长度: {len(text_content) if text_content else 0}, 数量: {card_number or '智能'}, 语言: {lang}")
+        self.logger.info(f"根据文本生成闪卡，task_id={task_id}, 文本长度: {len(text_content) if text_content else 0}, 数量: {card_number or '智能'}, 语言: {lang}")
+
+        # 必须提供task_id
+        if not task_id:
+            self.logger.error("task_id未提供")
+            return {
+                "success": False,
+                "error": "task_id为必填参数",
+                "cards": []
+            }
+
+        # 创建任务管理器
+        from business.task_manager import TaskManager
+        task_mgr = TaskManager()
 
         if not text_content or not text_content.strip():
             self.logger.error("文本内容为空")
+            # 更新任务状态为失败
+            task_mgr.update_status(task_id, 'failed')
             return {
                 "success": False,
                 "error": "文本内容不能为空",
@@ -146,7 +162,15 @@ class FlashcardBusiness:
             }
 
         try:
-            # 使用基础卡片类型生成闪卡
+            # 1. 更新状态：AI处理中
+            self.logger.info(f"更新任务状态: task_id={task_id}, status=ai_processing")
+            task_mgr.update_status(task_id, 'ai_processing')
+
+            # 2. 更新状态：生成闪卡中
+            self.logger.info(f"更新任务状态: task_id={task_id}, status=generating_cards")
+            task_mgr.update_status(task_id, 'generating_cards')
+
+            # 3. 使用基础卡片类型生成闪卡
             workflow = FlashcardGenerateWorkflow(
                 card_type="basic_card",
                 form="text",
@@ -168,12 +192,19 @@ class FlashcardBusiness:
 
             if isinstance(result, list):
                 self.logger.info(f"文本闪卡生成成功: 获取到{len(result)}张闪卡")
+
+                # 4. 更新状态：完成
+                self.logger.info(f"更新任务状态: task_id={task_id}, status=completed")
+                task_mgr.update_status(task_id, 'completed')
+
                 return {
                     "success": True,
                     "cards": result
                 }
             else:
                 self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
+                # 更新任务状态为失败
+                task_mgr.update_status(task_id, 'failed')
                 return {
                     "success": False,
                     "error": "AI返回格式错误",
@@ -182,6 +213,8 @@ class FlashcardBusiness:
 
         except Exception as e:
             self.logger.error(f"文本闪卡生成失败: {str(e)}", exc_info=True)
+            # 更新任务状态为失败
+            task_mgr.update_status(task_id, 'failed')
             return {
                 "success": False,
                 "error": str(e),
