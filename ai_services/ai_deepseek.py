@@ -47,15 +47,23 @@ class DeepseekAIService(AIServiceBase):
             self.logger.error(f"API调用失败: {str(e)}")
             raise
 
-    def chat_with_files(self, prompt: str, files: list, stream: bool = False) -> str:
+    def upload_files(self, files: list) -> list:
         """
-        支持文件上传的chat，files为文件路径列表。支持图片、office文档、pdf、文本、代码等类型。
+        上传文件到AI服务器
+
+        Args:
+            files: 文件路径列表
+
+        Returns:
+            list: 上传成功的文件信息列表（multimedia格式）
         """
-        self.logger.debug(f"chat_with_files调用开始: prompt长度={len(prompt)}, files={files}")
+        self.logger.debug(f"upload_files调用开始: files={files}")
+
         multimedia = []
         hy_token = self.api_key
         url = f"{self.base_url}upload"
         headers = {"Authorization": f"Bearer {hy_token}"}
+
         # 支持的扩展名与类型映射
         ext_type_map = {
             # 图片
@@ -67,16 +75,28 @@ class DeepseekAIService(AIServiceBase):
             # 文本
             "txt": "text", "csv": "csv", "text": "text",
             # 代码/配置/标记
-            "bat": "text", "c": "code", "cpp": "code", "cs": "code", "css": "code", "go": "code", "h": "code", "hpp": "code", "ini": "text", "java": "code", "js": "code", "json": "json", "lua": "code", "md": "text", "php": "code", "pl": "code", "py": "code", "rb": "code", "sh": "code", "sql": "code", "swift": "code", "tex": "text", "toml": "text", "vue": "code", "yaml": "yaml", "yml": "yaml", "xml": "xml", "html": "html"
+            "bat": "text", "c": "code", "cpp": "code", "cs": "code", "css": "code", "go": "code",
+            "h": "code", "hpp": "code", "ini": "text", "java": "code", "js": "code", "json": "json",
+            "lua": "code", "md": "text", "php": "code", "pl": "code", "py": "code", "rb": "code",
+            "sh": "code", "sql": "code", "swift": "code", "tex": "text", "toml": "text", "vue": "code",
+            "yaml": "yaml", "yml": "yaml", "xml": "xml", "html": "html"
         }
+
         for file_path in files:
             file_name = os.path.basename(file_path)
             ext = file_name.lower().split('.')[-1]
+
             if ext not in ext_type_map:
+                self.logger.error(f"不支持的文件类型: .{ext}, 文件: {file_name}")
                 raise ValueError(f"Unsupported file type: .{ext}. File: {file_name}")
+
             file_type = ext_type_map[ext]
+
+            # 读取文件并编码为base64
             with open(file_path, "rb") as f:
                 file_data = base64.b64encode(f.read()).decode("utf-8")
+
+            # 构建上传数据
             data = {
                 "agent_id": self.agent_id,
                 "hy_source": self.hy_source,
@@ -84,17 +104,38 @@ class DeepseekAIService(AIServiceBase):
                 "file": {
                     "file_name": file_name,
                     "file_data": file_data,
-                    "file_type": file_type,
+                    "file_type": 'doc',  # 统一使用doc类型
                 },
             }
+
+            # 上传文件
             resp = requests.post(url, json=data, headers=headers)
+
             if resp.status_code == 200:
                 self.logger.info(f"文件上传成功: {file_name}")
                 multimedia.append(resp.json())
             else:
                 self.logger.error(f"文件上传失败: {file_name}, status={resp.status_code}, msg={resp.text}")
-        # chat
-        chat_id = None  # 可根据需要传递chat_id
+                raise Exception(f"文件上传失败: {file_name}, status={resp.status_code}")
+
+        self.logger.info(f"所有文件上传完成，共 {len(multimedia)} 个文件")
+        return multimedia
+
+    def chat_with_multimedia(self, prompt: str, multimedia: list, chat_id: str = None, stream: bool = False) -> str:
+        """
+        使用已上传的文件进行对话
+
+        Args:
+            prompt: 对话提示词
+            multimedia: 已上传的文件信息列表（由 upload_files 返回）
+            chat_id: 会话ID（可选）
+            stream: 是否使用流式响应
+
+        Returns:
+            str: AI响应内容
+        """
+        self.logger.debug(f"chat_with_multimedia调用开始: prompt长度={len(prompt)}, multimedia数量={len(multimedia)}")
+
         try:
             response = self.client.chat.completions.create(
                 model="deepseek-v3",
@@ -109,15 +150,43 @@ class DeepseekAIService(AIServiceBase):
                     "chat_id": chat_id,
                 },
             )
+
+            # 拼接流式响应
             response_text = ""
             for chunk in response:
                 if hasattr(chunk.choices[0].delta, 'content') and chunk.choices[0].delta.content:
                     line = (json.loads(chunk.choices[0].delta.content).get("msg", "") or "")
                     response_text += line
-            self.logger.debug(f"chat_with_files响应成功: 响应长度={len(response_text)}")
+
+            self.logger.debug(f"chat_with_multimedia响应成功: 响应长度={len(response_text)}")
             return response_text
+
         except Exception as e:
-            self.logger.error(f"chat_with_files API调用失败: {str(e)}")
+            self.logger.error(f"chat_with_multimedia API调用失败: {str(e)}")
             raise
+
+    def chat_with_files(self, prompt: str, files: list, stream: bool = False) -> str:
+        """
+        支持文件上传的chat，files为文件路径列表。支持图片、office文档、pdf、文本、代码等类型。
+
+        这是一个便捷方法，内部调用 upload_files 和 chat_with_multimedia
+
+        Args:
+            prompt: 对话提示词
+            files: 文件路径列表
+            stream: 是否使用流式响应
+
+        Returns:
+            str: AI响应内容
+        """
+        self.logger.debug(f"chat_with_files调用开始: prompt长度={len(prompt)}, files={files}")
+
+        # 1. 上传文件
+        multimedia = self.upload_files(files)
+
+        # 2. 使用上传的文件进行对话
+        response_text = self.chat_with_multimedia(prompt, multimedia, chat_id=None, stream=stream)
+
+        return response_text
 
     
