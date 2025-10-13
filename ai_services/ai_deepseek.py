@@ -9,7 +9,7 @@ from utils.logger import get_logger
 class DeepseekAIService(AIServiceBase):
     def __init__(self, base_url=None, api_key=None, agent_id=None, hy_source=None, hy_user=None):
         base_url =  "http://39.104.17.54:7999/v1/"
-        api_key = ""
+        api_key = "8tE8bq6InCxff5mUqQZfc9aGHP6NPD80Cr/k258SiLJ9CYW8HiMzU5pREYyvnbvjBR5d0PcbgJbKaqG0NeWa+/0BBbxn5K4LxCS0jIqDD+5dtEYKFPVs3JKbP7ufu6eanr6o58XiE594CMGQut+ONmjy+36PKNAS0jvljVPrsiOQJtn6UpU8FD2I90cikHwMcbIXqw3reDfvXbdENDHN8EzTCUYjLOs98j/zloCtp1273EHn3+g/SY5LgbG2KF4n0Xb2qrGIIq6jxTO+GhoVGnu+WTNSvhnYskB6iubS7uXmD57SMATgs5VtM8WIk/2pGiobxTUpBKjq847kfG6SXQTvRBHve+NJTa0ipSBJ6c5I0bJiqnEP6XGwhnjm4h+OTR2p/muzV9OnmoPDtfP71n5H29vbxab1yWLeHFrfpWgwXK1g+VycUm0rtqj0/nabZe15kjdGSrEYFAgaX70ZWpPcgBmlXkRculXppaUvLzdLgucNqKkumLoyGdEOjqwAg6+qwfcoEt1HlMjTimI4lUMH4ggat7C2L1EsZkhb2/RuiUa7K1Xvh/8rhfFm+vq2wsos/5Tvji7kxhfdJBCThQAbb+H4QpHNuUON9r8TfKiqJXtgpvnXTvYbyAgyZXB2Myaky1Kgdfjo8B9QlfuXUg=="
         agent_id = "naQivTmsDa"
         hy_user = "d76efed3f1fb4cf1b1a3b4789111bc6c"
         self.base_url = base_url or os.getenv("DEEPSEEK_BASE_URL")

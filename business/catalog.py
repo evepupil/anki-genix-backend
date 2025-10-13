@@ -94,21 +94,48 @@ class CatalogService:
             self.logger.error(f"大纲生成失败 - 文本长度: {len(text_content)}, 错误: {str(e)}")
             raise
 
-    def analyze_catalog_from_file(self, file_path: str, lang="zh"):
+    def analyze_catalog_from_file(self, file_path: str, lang="zh", task_id=None):
         """
         基于上传文件生成知识大纲
 
         参数:
             file_path: 文件路径
             lang: 语言 (zh/en/ja)
+            task_id: 任务ID（必填，用于状态追踪）
 
         返回:
             大纲数据（JSON格式），包含章节层级结构
         """
-        self.logger.info(f"开始基于文件生成大纲 - 文件: {file_path}, 语言: {lang}")
+        self.logger.info(f"开始基于文件生成大纲 - 文件: {file_path}, task_id={task_id}, 语言: {lang}")
+
+        # 必须提供task_id
+        if not task_id:
+            self.logger.error("task_id未提供")
+            raise ValueError("task_id为必填参数")
+
+        # 创建任务管理器
+        from business.task_manager import TaskManager
+        task_mgr = TaskManager()
 
         try:
-            # 使用 full 模式，file 形式
+            # 1. 更新状态：文件上传中
+            self.logger.info(f"更新任务状态: task_id={task_id}, status=file_uploading")
+            task_mgr.update_status(task_id, 'file_uploading')
+
+            # 2. 上传文件到AI服务器
+            self.logger.info(f"开始上传文件到AI服务器: {file_path}")
+            multimedia = self.ai_service.upload_files([file_path])
+            self.logger.info(f"文件上传成功，multimedia数量: {len(multimedia)}")
+
+            # 3. 更新状态：AI处理中
+            self.logger.info(f"更新任务状态: task_id={task_id}, status=ai_processing")
+            task_mgr.update_status(task_id, 'ai_processing')
+
+            # 4. 更新状态：生成大纲中
+            self.logger.info(f"更新任务状态: task_id={task_id}, status=generating_catalog")
+            task_mgr.update_status(task_id, 'generating_catalog')
+
+            # 5. 使用 full 模式，file 形式
             workflow = CatalogAnalysisWorkflow(form="file", mode="full", ai_service=self.ai_service)
 
             # 构建参数
@@ -116,15 +143,21 @@ class CatalogService:
                 "lang": lang
             }
 
-            # 使用AI服务的 chat_with_files 方法上传文件
+            # 6. 使用已上传的文件进行对话
             prompt = workflow.build_prompt(params)
-            ai_result = self.ai_service.chat_with_files(prompt, [file_path])
+            ai_result = self.ai_service.chat_with_multimedia(prompt, multimedia)
             catalog = workflow.parse_result(ai_result)
 
             self.logger.info(f"大纲生成成功 - 文件: {file_path}")
+
+            # 7. 更新状态：大纲完成，等待用户选择章节
+            self.logger.info(f"更新任务状态: task_id={task_id}, status=catalog_ready")
+            task_mgr.update_status(task_id, 'catalog_ready')
 
             return catalog
 
         except Exception as e:
             self.logger.error(f"大纲生成失败 - 文件: {file_path}, 错误: {str(e)}")
+            # 更新任务状态为失败
+            task_mgr.update_status(task_id, 'failed')
             raise

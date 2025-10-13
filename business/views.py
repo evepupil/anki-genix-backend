@@ -84,9 +84,10 @@ def generate_flashcards_from_text(request):
         # 4. 验证文本长度是否与任务信息表一致
         task = validation['task']
         input_data = task.get('input_data', {})
-        expected_text_length = input_data.get('text_length')
+        expected_text = input_data.get('text')
 
-        if expected_text_length is not None:
+        if expected_text is not None:
+            expected_text_length = len(expected_text)
             actual_text_length = len(text_content)
             if actual_text_length != expected_text_length:
                 logger.warning(f"文本长度不匹配: 期望={expected_text_length}, 实际={actual_text_length}")
@@ -138,6 +139,7 @@ def generate_flashcards_from_file(request):
     请求方法: POST
     Content-Type: multipart/form-data
     请求体:
+    - task_id: 任务ID（必填）
     - file: 上传的文件（支持PDF、DOC、DOCX、TXT、MD等）
     - card_number: 卡片数量（可选，不提供则由AI智能决定数量）
     - lang: 语言（可选，默认中文）
@@ -155,7 +157,16 @@ def generate_flashcards_from_file(request):
     }
     """
     try:
-        # 检查是否有文件上传
+        # 1. 验证 task_id
+        task_id = request.POST.get('task_id', '').strip()
+        if not task_id:
+            logger.warning("task_id未提供")
+            return JsonResponse({
+                'success': False,
+                'error': 'task_id为必填参数'
+            }, status=400)
+
+        # 2. 检查是否有文件上传
         if 'file' not in request.FILES:
             logger.warning("未找到上传的文件")
             return JsonResponse({
@@ -173,18 +184,48 @@ def generate_flashcards_from_file(request):
                 card_number = None
         lang = request.POST.get('lang', 'zh')
 
-        logger.info(f"收到文件闪卡生成请求，文件名: {file_name}, 大小: {uploaded_file.size} bytes, 数量: {card_number or '智能'}, 语言: {lang}")
+        logger.info(f"收到文件闪卡生成请求，task_id={task_id}, 文件名: {file_name}, 大小: {uploaded_file.size} bytes, 数量: {card_number or '智能'}, 语言: {lang}")
 
-        # 文件大小限制（10MB）
+        # 3. 验证任务是否存在且合法
+        from business.task_manager import TaskManager
+        task_mgr = TaskManager()
+
+        validation = task_mgr.validate_task(
+            task_id=task_id,
+            expected_task_type="file"  # 验证输入类型为 file
+        )
+
+        if not validation['valid']:
+            logger.warning(f"任务验证失败: {validation['error']}")
+            return JsonResponse({
+                'success': False,
+                'error': validation['error']
+            }, status=400)
+
+        # 4. 验证文件名是否与任务信息表一致
+        task = validation['task']
+        input_data = task.get('input_data', {})
+        file_info = input_data.get('file', {})
+        expected_file_name = file_info.get('name')
+
+        if expected_file_name is not None and file_name != expected_file_name:
+            logger.warning(f"文件名不匹配: 期望={expected_file_name}, 实际={file_name}")
+            return JsonResponse({
+                'success': False,
+                'error': f'文件名不匹配，期望: {expected_file_name}, 实际: {file_name}'
+            }, status=400)
+
+        # 5. 文件大小限制（10MB）
         max_size = 10 * 1024 * 1024
         if uploaded_file.size > max_size:
             logger.warning(f"文件过大: {uploaded_file.size} bytes")
+            task_mgr.update_status(task_id, 'failed')
             return JsonResponse({
                 'success': False,
                 'error': f'文件大小不能超过 {max_size // (1024*1024)}MB'
             }, status=400)
 
-        # 保存文件到临时目录
+        # 6. 保存文件到临时目录
         temp_dir = tempfile.gettempdir()
         temp_file_path = os.path.join(temp_dir, file_name)
 
@@ -195,11 +236,11 @@ def generate_flashcards_from_file(request):
         logger.info(f"文件已保存至临时路径: {temp_file_path}")
 
         try:
-            # 调用业务层生成闪卡
+            # 7. 调用业务层生成闪卡（会自动更新任务状态）
             biz = FlashcardBusiness()
-            result = biz.generate_flashcards_from_file(temp_file_path, card_number, lang)
+            result = biz.generate_flashcards_from_file(temp_file_path, card_number, lang, task_id)
 
-            # 返回结果
+            # 8. 返回结果
             if result['success']:
                 logger.info(f"成功生成 {len(result['cards'])} 张闪卡")
                 return JsonResponse({
@@ -216,7 +257,7 @@ def generate_flashcards_from_file(request):
                 }, status=500)
 
         finally:
-            # 清理临时文件
+            # 9. 清理临时文件
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
                 logger.debug(f"已删除临时文件: {temp_file_path}")
@@ -300,19 +341,17 @@ def generate_flashcards_from_url(request):
                 'error': '请提供有效的URL地址'
             }, status=400)
 
-        # 4. 验证URL长度是否与任务信息表一致
+        # 4. 验证URL是否与任务信息表一致
         task = validation['task']
         input_data = task.get('input_data', {})
-        expected_url_length = input_data.get('url_length')
+        expected_url = input_data.get('web_url')
 
-        if expected_url_length is not None:
-            actual_url_length = len(url)
-            if actual_url_length != expected_url_length:
-                logger.warning(f"URL长度不匹配: 期望={expected_url_length}, 实际={actual_url_length}")
-                return JsonResponse({
-                    'success': False,
-                    'error': f'URL长度不匹配，期望: {expected_url_length}, 实际: {actual_url_length}'
-                }, status=400)
+        if expected_url is not None and url != expected_url:
+            logger.warning(f"URL不匹配: 期望={expected_url}, 实际={url}")
+            return JsonResponse({
+                'success': False,
+                'error': f'URL不匹配，期望: {expected_url}, 实际: {url}'
+            }, status=400)
 
         # 5. 验证card_number参数（如果提供了的话）
         if card_number is not None:
@@ -477,6 +516,7 @@ def generate_flashcards_from_file_section(request):
     请求方法: POST
     Content-Type: multipart/form-data
     请求体:
+    - task_id: 任务ID（必填）
     - file: 上传的文件（支持PDF、DOC、DOCX、TXT、MD等）
     - section_title: 章节标题
     - card_number: 卡片数量（可选，不提供则由AI智能决定数量）
@@ -497,7 +537,16 @@ def generate_flashcards_from_file_section(request):
     }
     """
     try:
-        # 检查是否有文件上传
+        # 1. 验证 task_id
+        task_id = request.POST.get('task_id', '').strip()
+        if not task_id:
+            logger.warning("task_id未提供")
+            return JsonResponse({
+                'success': False,
+                'error': 'task_id为必填参数'
+            }, status=400)
+
+        # 2. 检查是否有文件上传
         if 'file' not in request.FILES:
             logger.warning("未找到上传的文件")
             return JsonResponse({
@@ -516,26 +565,67 @@ def generate_flashcards_from_file_section(request):
                 card_number = None
         lang = request.POST.get('lang', 'zh')
 
-        logger.info(f"收到文件章节闪卡生成请求，文件名: {file_name}, 章节: {section_title}, 大小: {uploaded_file.size} bytes, 数量: {card_number or '智能'}, 语言: {lang}")
+        logger.info(f"收到文件章节闪卡生成请求，task_id={task_id}, 文件名: {file_name}, 章节: {section_title}, 大小: {uploaded_file.size} bytes, 数量: {card_number or '智能'}, 语言: {lang}")
 
-        # 验证输入
+        # 3. 验证任务是否存在且合法
+        from business.task_manager import TaskManager
+        task_mgr = TaskManager()
+
+        validation = task_mgr.validate_task(
+            task_id=task_id,
+            expected_task_type="file"
+        )
+
+        if not validation['valid']:
+            logger.warning(f"任务验证失败: {validation['error']}")
+            return JsonResponse({
+                'success': False,
+                'error': validation['error']
+            }, status=400)
+
+        # 4. 验证任务状态必须是 catalog_ready（已生成大纲，等待用户选择章节）
+        task = validation['task']
+        current_status = task.get('status')
+        if current_status != 'catalog_ready':
+            logger.warning(f"任务状态不正确: 期望=catalog_ready, 实际={current_status}")
+            return JsonResponse({
+                'success': False,
+                'error': f'任务状态不正确，期望: catalog_ready, 实际: {current_status}'
+            }, status=400)
+
+        # 5. 验证文件名是否与任务信息表一致
+        input_data = task.get('input_data', {})
+        file_info = input_data.get('file', {})
+        expected_file_name = file_info.get('name')
+
+        if expected_file_name is not None and file_name != expected_file_name:
+            logger.warning(f"文件名不匹配: 期望={expected_file_name}, 实际={file_name}")
+            task_mgr.update_status(task_id, 'failed')
+            return JsonResponse({
+                'success': False,
+                'error': f'文件名不匹配，期望: {expected_file_name}, 实际: {file_name}'
+            }, status=400)
+
+        # 6. 验证章节标题
         if not section_title:
             logger.warning("章节标题为空")
+            task_mgr.update_status(task_id, 'failed')
             return JsonResponse({
                 'success': False,
                 'error': '请提供章节标题'
             }, status=400)
 
-        # 文件大小限制（10MB）
+        # 7. 文件大小限制（10MB）
         max_size = 10 * 1024 * 1024
         if uploaded_file.size > max_size:
             logger.warning(f"文件过大: {uploaded_file.size} bytes")
+            task_mgr.update_status(task_id, 'failed')
             return JsonResponse({
                 'success': False,
                 'error': f'文件大小不能超过 {max_size // (1024*1024)}MB'
             }, status=400)
 
-        # 保存文件到临时目录
+        # 8. 保存文件到临时目录
         temp_dir = tempfile.gettempdir()
         temp_file_path = os.path.join(temp_dir, file_name)
 
@@ -546,11 +636,11 @@ def generate_flashcards_from_file_section(request):
         logger.info(f"文件已保存至临时路径: {temp_file_path}")
 
         try:
-            # 调用业务层生成闪卡
+            # 9. 调用业务层生成闪卡（会自动更新任务状态）
             biz = FlashcardBusiness()
-            result = biz.generate_flashcards_from_file_section(temp_file_path, section_title, card_number, lang)
+            result = biz.generate_flashcards_from_file_section(temp_file_path, section_title, card_number, lang, task_id)
 
-            # 返回结果
+            # 10. 返回结果
             if result['success']:
                 logger.info(f"成功生成 {len(result['cards'])} 张闪卡 - 文件: {file_name}, 章节: {section_title}")
                 return JsonResponse({
@@ -568,7 +658,7 @@ def generate_flashcards_from_file_section(request):
                 }, status=500)
 
         finally:
-            # 清理临时文件
+            # 11. 清理临时文件
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
                 logger.debug(f"已删除临时文件: {temp_file_path}")
@@ -734,6 +824,7 @@ def analyze_catalog_from_file(request):
     请求方法: POST
     Content-Type: multipart/form-data
     请求体:
+    - task_id: 任务ID（必填）
     - file: 上传的文件
     - lang: 语言 (可选，默认zh)
 
@@ -751,7 +842,16 @@ def analyze_catalog_from_file(request):
     }
     """
     try:
-        # 检查是否有文件上传
+        # 1. 验证 task_id
+        task_id = request.POST.get('task_id', '').strip()
+        if not task_id:
+            logger.warning("task_id未提供")
+            return JsonResponse({
+                'success': False,
+                'error': 'task_id为必填参数'
+            }, status=400)
+
+        # 2. 检查是否有文件上传
         if 'file' not in request.FILES:
             logger.warning("未找到上传的文件")
             return JsonResponse({
@@ -763,18 +863,50 @@ def analyze_catalog_from_file(request):
         file_name = uploaded_file.name
         lang = request.POST.get('lang', 'zh')
 
-        logger.info(f"收到文件大纲生成请求，文件名: {file_name}, 大小: {uploaded_file.size} bytes, 语言: {lang}")
+        logger.info(f"收到文件大纲生成请求，task_id={task_id}, 文件名: {file_name}, 大小: {uploaded_file.size} bytes, 语言: {lang}")
 
-        # 文件大小限制（10MB）
+        # 3. 验证任务是否存在且合法
+        from business.task_manager import TaskManager
+        task_mgr = TaskManager()
+
+        validation = task_mgr.validate_task(
+            task_id=task_id,
+            expected_task_type="file",
+            expected_workflow_type="extract_catalog"
+        )
+
+        if not validation['valid']:
+            logger.warning(f"任务验证失败: {validation['error']}")
+            return JsonResponse({
+                'success': False,
+                'error': validation['error']
+            }, status=400)
+
+        # 4. 验证文件名是否与任务信息表一致
+        task = validation['task']
+        input_data = task.get('input_data', {})
+        file_info = input_data.get('file', {})
+        expected_file_name = file_info.get('name')
+
+        if expected_file_name is not None and file_name != expected_file_name:
+            logger.warning(f"文件名不匹配: 期望={expected_file_name}, 实际={file_name}")
+            task_mgr.update_status(task_id, 'failed')
+            return JsonResponse({
+                'success': False,
+                'error': f'文件名不匹配，期望: {expected_file_name}, 实际: {file_name}'
+            }, status=400)
+
+        # 5. 文件大小限制（10MB）
         max_size = 10 * 1024 * 1024
         if uploaded_file.size > max_size:
             logger.warning(f"文件过大: {uploaded_file.size} bytes")
+            task_mgr.update_status(task_id, 'failed')
             return JsonResponse({
                 'success': False,
                 'error': f'文件大小不能超过 {max_size // (1024*1024)}MB'
             }, status=400)
 
-        # 保存文件到临时目录
+        # 6. 保存文件到临时目录
         temp_dir = tempfile.gettempdir()
         temp_file_path = os.path.join(temp_dir, file_name)
 
@@ -785,11 +917,11 @@ def analyze_catalog_from_file(request):
         logger.info(f"文件已保存至临时路径: {temp_file_path}")
 
         try:
-            # 调用业务层生成大纲
+            # 7. 调用业务层生成大纲（会自动更新任务状态）
             catalog_service = CatalogService()
-            catalog = catalog_service.analyze_catalog_from_file(temp_file_path, lang)
+            catalog = catalog_service.analyze_catalog_from_file(temp_file_path, lang, task_id)
 
-            # 返回结果
+            # 8. 返回结果
             logger.info(f"成功生成大纲 - 文件: {file_name}")
             return JsonResponse({
                 'success': True,
@@ -798,7 +930,7 @@ def analyze_catalog_from_file(request):
             })
 
         finally:
-            # 清理临时文件
+            # 9. 清理临时文件
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
                 logger.debug(f"已删除临时文件: {temp_file_path}")
