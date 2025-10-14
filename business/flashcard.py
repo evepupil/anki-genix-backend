@@ -11,6 +11,73 @@ class FlashcardBusiness:
         self.logger = get_logger(name="business.flashcard")
         self.logger.info("初始化 FlashcardBusiness")
 
+    def _save_flashcard_result(self, task_id: str, cards: list, source_type: str, catalog_id: str = None) -> dict:
+        """
+        保存闪卡结果到数据库
+
+        Args:
+            task_id: 任务ID
+            cards: 生成的闪卡列表
+            source_type: 来源类型（text/file/web）
+            catalog_id: 大纲ID（可选）
+
+        Returns:
+            dict: 保存结果
+                - success: 是否成功
+                - result_id: 闪卡结果ID（成功时）
+                - error: 错误信息（失败时）
+        """
+        try:
+            from business.task_manager import TaskManager
+            from business.database.flashcard_result_db import FlashcardResultDB
+
+            # 获取任务信息以获取 user_id
+            task_mgr = TaskManager()
+            task = task_mgr.get_task(task_id)
+
+            if not task:
+                self.logger.error(f"任务不存在，无法保存闪卡结果: task_id={task_id}")
+                return {
+                    "success": False,
+                    "error": "任务不存在"
+                }
+
+            user_id = task.get('user_id')
+            if not user_id:
+                self.logger.error(f"任务中没有 user_id: task_id={task_id}")
+                return {
+                    "success": False,
+                    "error": "任务中没有user_id"
+                }
+
+            # 创建闪卡结果记录
+            result_db = FlashcardResultDB()
+            result = result_db.create_result(
+                task_id=task_id,
+                user_id=user_id,
+                source_type=source_type,
+                catalog_id=catalog_id,
+                total_count=len(cards)
+            )
+
+            if result['success']:
+                result_id = result['data'].get('id')
+                self.logger.info(f"闪卡结果保存成功: task_id={task_id}, result_id={result_id}, count={len(cards)}")
+                return {
+                    "success": True,
+                    "result_id": result_id
+                }
+            else:
+                self.logger.error(f"闪卡结果保存失败: task_id={task_id}, 错误: {result.get('error')}")
+                return result
+
+        except Exception as e:
+            self.logger.error(f"保存闪卡结果异常: task_id={task_id}, 错误: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
     def analyze_catalog(self, topic, lang="zh"):
         """
         目录分析，返回AI结构化目录内容。
@@ -135,13 +202,24 @@ class FlashcardBusiness:
             if isinstance(result, list):
                 self.logger.info(f"文件闪卡生成成功: 获取到{len(result)}张闪卡")
 
-                # 8. 更新状态：完成
+                # 8. 保存闪卡结果到数据库
+                save_result = self._save_flashcard_result(
+                    task_id=task_id,
+                    cards=result,
+                    source_type='file'
+                )
+
+                if not save_result['success']:
+                    self.logger.warning(f"闪卡结果保存失败，但不影响返回: {save_result.get('error')}")
+
+                # 9. 更新状态：完成
                 self.logger.info(f"更新任务状态: task_id={task_id}, status=completed")
                 task_mgr.update_status(task_id, 'completed')
 
                 return {
                     "success": True,
-                    "cards": result
+                    "cards": result,
+                    "result_id": save_result.get('result_id')  # 返回结果ID
                 }
             else:
                 self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
@@ -233,13 +311,24 @@ class FlashcardBusiness:
             if isinstance(result, list):
                 self.logger.info(f"文本闪卡生成成功: 获取到{len(result)}张闪卡")
 
-                # 4. 更新状态：完成
+                # 4. 保存闪卡结果到数据库
+                save_result = self._save_flashcard_result(
+                    task_id=task_id,
+                    cards=result,
+                    source_type='text'
+                )
+
+                if not save_result['success']:
+                    self.logger.warning(f"闪卡结果保存失败，但不影响返回: {save_result.get('error')}")
+
+                # 5. 更新状态：完成
                 self.logger.info(f"更新任务状态: task_id={task_id}, status=completed")
                 task_mgr.update_status(task_id, 'completed')
 
                 return {
                     "success": True,
-                    "cards": result
+                    "cards": result,
+                    "result_id": save_result.get('result_id')  # 返回结果ID
                 }
             else:
                 self.logger.warning(f"闪卡生成返回非结构化内容: {result}")
@@ -791,7 +880,30 @@ class FlashcardBusiness:
                     "section_results": []
                 }
 
-            # 8. 更新状态：完成
+            # 8. 获取 catalog_id（如果有）
+            catalog_id = None
+            try:
+                from business.database.catalog_db import CatalogDB
+                catalog_db = CatalogDB()
+                catalog_result = catalog_db.get_catalog_by_task_id(task_id)
+                if catalog_result['success']:
+                    catalog_id = catalog_result['data'].get('id')
+                    self.logger.info(f"获取到 catalog_id: {catalog_id}")
+            except Exception as catalog_err:
+                self.logger.warning(f"获取 catalog_id 失败: {str(catalog_err)}")
+
+            # 9. 保存闪卡结果到数据库
+            save_result = self._save_flashcard_result(
+                task_id=task_id,
+                cards=all_cards,
+                source_type='file',
+                catalog_id=catalog_id
+            )
+
+            if not save_result['success']:
+                self.logger.warning(f"闪卡结果保存失败，但不影响返回: {save_result.get('error')}")
+
+            # 10. 更新状态：完成
             self.logger.info(f"更新任务状态: task_id={task_id}, status=completed")
             task_mgr.update_status(task_id, 'completed')
 
@@ -799,7 +911,8 @@ class FlashcardBusiness:
                 "success": True,
                 "cards": all_cards,
                 "section_results": section_results,
-                "file_name": file_name
+                "file_name": file_name,
+                "result_id": save_result.get('result_id')  # 返回结果ID
             }
 
         except Exception as e:
