@@ -169,7 +169,26 @@ class CatalogService:
 
             self.logger.info(f"大纲生成成功 - 文件: {file_path}")
 
-            # 7. 更新状态：大纲完成，等待用户选择章节
+            # 7. 保存大纲到 catalog_info 表
+            if task and isinstance(catalog, list):
+                user_id = task.get('user_id')
+                if user_id:
+                    self.logger.info(f"保存大纲到catalog_info表: task_id={task_id}, user_id={user_id}")
+                    from business.database.catalog_db import CatalogDB
+                    catalog_db = CatalogDB()
+                    save_result = catalog_db.create_catalog(
+                        task_id=task_id,
+                        user_id=user_id,
+                        catalog_data=catalog
+                    )
+                    if save_result.get('success'):
+                        self.logger.info(f"大纲保存成功: catalog_id={save_result['data'].get('id')}")
+                    else:
+                        self.logger.error(f"大纲保存失败: {save_result.get('error')}")
+                else:
+                    self.logger.warning(f"任务中没有user_id，跳过保存大纲")
+
+            # 8. 更新状态：大纲完成，等待用户选择章节
             self.logger.info(f"更新任务状态: task_id={task_id}, status=catalog_ready")
             task_mgr.update_status(task_id, 'catalog_ready')
 
