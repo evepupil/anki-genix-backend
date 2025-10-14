@@ -833,13 +833,30 @@ def analyze_catalog_from_file(request):
         "success": true,
         "catalog": [
             {
-                "chapter": "章节名称",
-                "description": "章节描述",
-                "sections": [...]
+                "id": "1",
+                "chapter": "第一章 概述",
+                "description": "本章介绍基本概念和框架",
+                "sections": [
+                    {
+                        "id": "1.1",
+                        "section": "1.1 背景知识",
+                        "description": "介绍相关背景和历史",
+                        "subsections": [
+                            {
+                                "id": "1.1.1",
+                                "subsection": "1.1.1 历史发展",
+                                "description": "详细介绍发展历程"
+                            }
+                        ]
+                    }
+                ]
             }
         ],
         "file_name": "example.pdf"
     }
+
+    注意: catalog中的每个章节、小节、子小节都包含唯一的id字段，
+    前端可直接使用这些id进行章节选择操作
     """
     try:
         # 1. 验证 task_id

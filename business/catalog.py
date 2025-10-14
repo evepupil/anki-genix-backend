@@ -169,7 +169,8 @@ class CatalogService:
 
             self.logger.info(f"大纲生成成功 - 文件: {file_path}")
 
-            # 7. 保存大纲到 catalog_info 表
+            # 7. 保存大纲到 catalog_info 表，并返回带ID的catalog
+            catalog_with_ids = catalog  # 默认返回原始catalog
             if task and isinstance(catalog, list):
                 user_id = task.get('user_id')
                 if user_id:
@@ -182,7 +183,10 @@ class CatalogService:
                         catalog_data=catalog
                     )
                     if save_result.get('success'):
-                        self.logger.info(f"大纲保存成功: catalog_id={save_result['data'].get('id')}")
+                        # 从保存结果中获取带ID的catalog_data
+                        saved_data = save_result.get('data', {})
+                        catalog_with_ids = saved_data.get('catalog_data', catalog)
+                        self.logger.info(f"大纲保存成功: catalog_id={saved_data.get('id')}, 已添加ID到章节")
                     else:
                         self.logger.error(f"大纲保存失败: {save_result.get('error')}")
                 else:
@@ -192,7 +196,8 @@ class CatalogService:
             self.logger.info(f"更新任务状态: task_id={task_id}, status=catalog_ready")
             task_mgr.update_status(task_id, 'catalog_ready')
 
-            return catalog
+            # 返回带ID的catalog
+            return catalog_with_ids
 
         except Exception as e:
             self.logger.error(f"大纲生成失败 - 文件: {file_path}, 错误: {str(e)}")
