@@ -511,14 +511,14 @@ def generate_flashcards_from_text_section(request):
 @require_http_methods(["POST"])
 def generate_flashcards_from_file_section(request):
     """
-    API接口：根据上传文件和指定章节生成闪卡
+    API接口：根据上传文件和指定章节ID列表生成闪卡
 
     请求方法: POST
     Content-Type: multipart/form-data
     请求体:
     - task_id: 任务ID（必填）
     - file: 上传的文件（支持PDF、DOC、DOCX、TXT、MD等）
-    - section_title: 章节标题
+    - chapter_ids: 章节ID列表（JSON字符串格式）
     - card_number: 卡片数量（可选，不提供则由AI智能决定数量）
     - lang: 语言（可选，默认中文）
 
@@ -532,7 +532,13 @@ def generate_flashcards_from_file_section(request):
             }
         ],
         "count": 10,
-        "section_title": "第三章：Python数据类型",
+        "section_results": [
+            {
+                "section_title": "第三章：Python数据类型",
+                "cards": [{"question": "问题", "answer": "答案"}],
+                "count": 5
+            }
+        ],
         "file_name": "example.pdf"
     }
     """
@@ -556,7 +562,7 @@ def generate_flashcards_from_file_section(request):
 
         uploaded_file = request.FILES['file']
         file_name = uploaded_file.name
-        section_title = request.POST.get('section_title', '').strip()
+        chapter_ids = request.POST.get('chapter_ids', '[]')
         card_number = request.POST.get('card_number', None)  # 可选，None表示智能模式
         if card_number is not None:
             try:
@@ -565,7 +571,19 @@ def generate_flashcards_from_file_section(request):
                 card_number = None
         lang = request.POST.get('lang', 'zh')
 
-        logger.info(f"收到文件章节闪卡生成请求，task_id={task_id}, 文件名: {file_name}, 章节: {section_title}, 大小: {uploaded_file.size} bytes, 数量: {card_number or '智能'}, 语言: {lang}")
+        # 解析章节ID列表
+        try:
+            chapter_ids = json.loads(chapter_ids)
+            if not isinstance(chapter_ids, list):
+                chapter_ids = []
+        except json.JSONDecodeError:
+            logger.warning("章节ID列表格式错误")
+            return JsonResponse({
+                'success': False,
+                'error': '章节ID列表格式错误'
+            }, status=400)
+
+        logger.info(f"收到文件章节闪卡生成请求，task_id={task_id}, 文件名: {file_name}, 章节ID: {chapter_ids}, 大小: {uploaded_file.size} bytes, 数量: {card_number or '智能'}, 语言: {lang}")
 
         # 3. 验证任务是否存在且合法
         from business.task_manager import TaskManager
@@ -606,16 +624,29 @@ def generate_flashcards_from_file_section(request):
                 'error': f'文件名不匹配，期望: {expected_file_name}, 实际: {file_name}'
             }, status=400)
 
-        # 6. 验证章节标题
-        if not section_title:
-            logger.warning("章节标题为空")
+        # 6. 验证章节ID列表
+        if not chapter_ids:
+            logger.warning("章节ID列表为空")
             task_mgr.update_status(task_id, 'failed')
             return JsonResponse({
                 'success': False,
-                'error': '请提供章节标题'
+                'error': '请提供章节ID列表'
             }, status=400)
 
-        # 7. 文件大小限制（10MB）
+        # 7. 更新大纲信息表中的选中章节ID列表 (在验证合法后立即更新)
+        try:
+            from business.database.catalog_db import CatalogDB
+            catalog_db = CatalogDB()
+            update_result = catalog_db.update_selected_sections(task_id, chapter_ids)
+            
+            if update_result.get('success'):
+                logger.info(f"成功更新选中章节ID到大纲表: task_id={task_id}, 选中ID数量: {len(chapter_ids)}")
+            else:
+                logger.warning(f"更新选中章节ID到大纲表失败: {update_result.get('error')}")
+        except Exception as update_error:
+            logger.error(f"更新选中章节ID到大纲表时发生异常: {str(update_error)}", exc_info=True)
+
+        # 8. 文件大小限制（10MB）
         max_size = 10 * 1024 * 1024
         if uploaded_file.size > max_size:
             logger.warning(f"文件过大: {uploaded_file.size} bytes")
@@ -625,7 +656,7 @@ def generate_flashcards_from_file_section(request):
                 'error': f'文件大小不能超过 {max_size // (1024*1024)}MB'
             }, status=400)
 
-        # 8. 保存文件到临时目录
+        # 9. 保存文件到临时目录
         temp_dir = tempfile.gettempdir()
         temp_file_path = os.path.join(temp_dir, file_name)
 
@@ -636,18 +667,19 @@ def generate_flashcards_from_file_section(request):
         logger.info(f"文件已保存至临时路径: {temp_file_path}")
 
         try:
-            # 9. 调用业务层生成闪卡（会自动更新任务状态）
+            # 10. 调用业务层生成闪卡（会自动更新任务状态）
+            # 需要更新业务层方法以支持章节ID
             biz = FlashcardBusiness()
-            result = biz.generate_flashcards_from_file_section(temp_file_path, section_title, card_number, lang, task_id)
+            result = biz.generate_flashcards_from_file_section_by_ids(temp_file_path, chapter_ids, card_number, lang, task_id)
 
-            # 10. 返回结果
+            # 11. 返回结果
             if result['success']:
-                logger.info(f"成功生成 {len(result['cards'])} 张闪卡 - 文件: {file_name}, 章节: {section_title}")
+                logger.info(f"成功生成 {len(result['cards'])} 张闪卡 - 文件: {file_name}, 章节ID数量: {len(chapter_ids)}")
                 return JsonResponse({
                     'success': True,
                     'cards': result['cards'],
                     'count': len(result['cards']),
-                    'section_title': result.get('section_title'),
+                    'section_results': result.get('section_results', []),
                     'file_name': result.get('file_name', file_name)
                 })
             else:
@@ -658,7 +690,7 @@ def generate_flashcards_from_file_section(request):
                 }, status=500)
 
         finally:
-            # 11. 清理临时文件
+            # 12. 清理临时文件
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
                 logger.debug(f"已删除临时文件: {temp_file_path}")

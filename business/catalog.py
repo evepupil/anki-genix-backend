@@ -204,3 +204,42 @@ class CatalogService:
             # 更新任务状态为失败
             task_mgr.update_status(task_id, 'failed')
             raise
+            
+    def get_catalog_from_file(self, file_path: str, lang="zh", task_id=None):
+        """
+        从数据库获取文件的大纲信息
+        
+        参数:
+            file_path: 文件路径（用于兼容性）
+            lang: 语言 (zh/en/ja)
+            task_id: 任务ID（必填，用于查找大纲）
+            
+        返回:
+            大纲数据（JSON格式），包含章节层级结构
+        """
+        self.logger.info(f"从数据库获取文件大纲 - 文件: {file_path}, task_id={task_id}, 语言: {lang}")
+        
+        # 必须提供task_id
+        if not task_id:
+            self.logger.error("task_id未提供")
+            raise ValueError("task_id为必填参数")
+            
+        try:
+            # 从数据库中获取大纲
+            from business.database.catalog_db import CatalogDB
+            catalog_db = CatalogDB()
+            
+            catalog_result = catalog_db.get_catalog_by_task_id(task_id)
+            
+            if not catalog_result.get('success') or not catalog_result.get('data'):
+                self.logger.warning(f"未能从数据库获取大纲，task_id={task_id}")
+                return None
+                
+            catalog_data = catalog_result['data'].get('catalog_data')
+            self.logger.info(f"成功从数据库获取大纲 - task_id={task_id}")
+            
+            return catalog_data
+            
+        except Exception as e:
+            self.logger.error(f"获取大纲失败 - 文件: {file_path}, 错误: {str(e)}")
+            raise
