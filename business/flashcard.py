@@ -478,15 +478,6 @@ class FlashcardBusiness:
         from business.task_manager import TaskManager
         task_mgr = TaskManager()
 
-        if not file_path:
-            self.logger.error("文件路径为空")
-            task_mgr.update_status(task_id, 'failed')
-            return {
-                "success": False,
-                "error": "文件路径不能为空",
-                "cards": []
-            }
-
         if not section_title or not section_title.strip():
             self.logger.error("章节标题为空")
             task_mgr.update_status(task_id, 'failed')
@@ -497,24 +488,59 @@ class FlashcardBusiness:
             }
 
         try:
-            import os
-            if not os.path.exists(file_path):
-                self.logger.error(f"文件不存在: {file_path}")
-                task_mgr.update_status(task_id, 'failed')
+            # 1. 获取任务信息
+            task = task_mgr.get_task(task_id)
+            if not task:
+                self.logger.error(f"任务不存在: task_id={task_id}")
                 return {
                     "success": False,
-                    "error": "文件不存在",
+                    "error": "任务不存在",
                     "cards": []
                 }
 
-            # 1. 更新状态：文件上传中
-            self.logger.info(f"更新任务状态: task_id={task_id}, status=file_uploading")
-            task_mgr.update_status(task_id, 'file_uploading')
+            # 2. 尝试从input_data.file.info中获取multimedia
+            input_data = task.get('input_data', {})
+            file_data = input_data.get('file', {})
+            multimedia = file_data.get('info')
 
-            # 2. 上传文件到AI服务器
-            self.logger.info(f"开始上传文件到AI服务器: {file_path}")
-            multimedia = self.ai_service.upload_files([file_path])
-            self.logger.info(f"文件上传成功，multimedia数量: {len(multimedia)}")
+            file_name = file_data.get('name', 'unknown')
+
+            if multimedia:
+                # 从缓存中获取已上传的文件信息
+                self.logger.info(f"从input_data.file.info中获取到已上传的multimedia，跳过文件上传步骤")
+            else:
+                # 没有缓存，需要上传文件
+                self.logger.info(f"input_data.file.info中没有multimedia，需要上传文件")
+
+                if not file_path:
+                    self.logger.error("文件路径为空")
+                    task_mgr.update_status(task_id, 'failed')
+                    return {
+                        "success": False,
+                        "error": "文件路径不能为空",
+                        "cards": []
+                    }
+
+                import os
+                if not os.path.exists(file_path):
+                    self.logger.error(f"文件不存在: {file_path}")
+                    task_mgr.update_status(task_id, 'failed')
+                    return {
+                        "success": False,
+                        "error": "文件不存在",
+                        "cards": []
+                    }
+
+                # 更新状态：文件上传中
+                self.logger.info(f"更新任务状态: task_id={task_id}, status=file_uploading")
+                task_mgr.update_status(task_id, 'file_uploading')
+
+                # 上传文件到AI服务器
+                self.logger.info(f"开始上传文件到AI服务器: {file_path}")
+                multimedia = self.ai_service.upload_files([file_path])
+                self.logger.info(f"文件上传成功，multimedia数量: {len(multimedia)}")
+
+                file_name = os.path.basename(file_path)
 
             # 3. 更新状态：AI处理中
             self.logger.info(f"更新任务状态: task_id={task_id}, status=ai_processing")
@@ -531,9 +557,6 @@ class FlashcardBusiness:
                 mode="section",
                 ai_service=self.ai_service
             )
-
-            # 获取文件名（用于提示词）
-            file_name = os.path.basename(file_path)
 
             # 构建参数
             params = {

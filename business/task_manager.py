@@ -97,6 +97,65 @@ class TaskManager:
                 "error": str(e)
             }
 
+    def update_input_data_field(
+        self,
+        task_id: str,
+        field_name: str,
+        field_value: Any
+    ) -> Dict[str, Any]:
+        """
+        更新任务input_data中的某个字段
+
+        Args:
+            task_id: 任务ID
+            field_name: 字段名
+            field_value: 字段值
+
+        Returns:
+            dict: 更新结果
+                - success: 是否成功
+                - error: 错误信息（失败时）
+        """
+        try:
+            self.logger.info(f"更新任务input_data字段: task_id={task_id}, field={field_name}")
+
+            # 先获取当前任务
+            task = self.get_task(task_id)
+            if not task:
+                return {
+                    "success": False,
+                    "error": "任务不存在"
+                }
+
+            # 获取当前的input_data
+            input_data = task.get('input_data', {})
+            if input_data is None:
+                input_data = {}
+
+            # 更新字段
+            input_data[field_name] = field_value
+
+            # 执行更新
+            result = self.db.update(
+                table="task_info",
+                data={"input_data": input_data},
+                filters={"id": task_id}
+            )
+
+            if result['success']:
+                self.logger.info(f"input_data字段更新成功: task_id={task_id}, field={field_name}")
+            else:
+                self.logger.error(f"input_data字段更新失败: task_id={task_id}, 错误: {result.get('error')}")
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"更新input_data字段异常: task_id={task_id}, 错误: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
     def validate_task(
         self,
         task_id: str,

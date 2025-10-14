@@ -127,6 +127,25 @@ class CatalogService:
             multimedia = self.ai_service.upload_files([file_path])
             self.logger.info(f"文件上传成功，multimedia数量: {len(multimedia)}")
 
+            # 2.1 获取当前任务的input_data
+            task = task_mgr.get_task(task_id)
+            if task:
+                input_data = task.get('input_data', {})
+                # 更新input_data.file.info字段，保存multimedia信息
+                if 'file' not in input_data:
+                    input_data['file'] = {}
+                input_data['file']['info'] = multimedia
+
+                self.logger.info(f"保存文件multimedia到input_data.file.info: task_id={task_id}")
+                # 使用task_mgr的db来更新
+                result = task_mgr.db.update(
+                    table="task_info",
+                    data={"input_data": input_data},
+                    filters={"id": task_id}
+                )
+                if not result.get('success'):
+                    self.logger.error(f"保存multimedia失败: {result.get('error')}")
+
             # 3. 更新状态：AI处理中
             self.logger.info(f"更新任务状态: task_id={task_id}, status=ai_processing")
             task_mgr.update_status(task_id, 'ai_processing')
