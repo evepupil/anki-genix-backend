@@ -1037,10 +1037,13 @@ class FlashcardBusiness:
             from business.catalog import CatalogService
             catalog_service = CatalogService()
             catalog = catalog_service.get_catalog_from_file(file_path, lang, task_id)
-            
+
             # 从大纲中获取章节标题
             section_titles = self._get_section_titles_by_ids(catalog, chapter_ids)
-            
+
+            # 过滤掉父章节，只保留叶子节点（没有子章节的节点）
+            section_titles = self._filter_leaf_sections(section_titles, chapter_ids, catalog)
+
             if not section_titles:
                 self.logger.error(f"无法根据章节ID找到对应的章节: {chapter_ids}")
                 task_mgr.update_status(task_id, 'failed')
@@ -1208,4 +1211,93 @@ class FlashcardBusiness:
                         search_catalog(item[key], new_parents)
 
         search_catalog(catalog if catalog else [])
-        return titles 
+        return titles
+
+    def _filter_leaf_sections(self, section_titles: list, chapter_ids: list, catalog: list) -> list:
+        """
+        过滤掉父章节，只保留叶子节点（没有被选中的子章节的节点）
+
+        Args:
+            section_titles: 章节标题列表
+            chapter_ids: 选中的章节ID列表
+            catalog: 大纲数据
+
+        Returns:
+            list: 过滤后的章节标题列表（只包含叶子节点）
+        """
+        # 构建 ID -> 是否有被选中的子节点 的映射
+        has_selected_children = set()
+
+        def check_children(items):
+            for item in items:
+                item_id = item.get('id')
+
+                # 检查子节点
+                has_child_selected = False
+                for key in ['sections', 'subsections']:
+                    if key in item and isinstance(item[key], list):
+                        for child in item[key]:
+                            child_id = child.get('id')
+                            if child_id in chapter_ids:
+                                has_child_selected = True
+                                # 递归检查更深层的子节点
+                                check_children([child])
+
+                # 如果当前节点有子节点被选中，标记它
+                if has_child_selected and item_id in chapter_ids:
+                    has_selected_children.add(item_id)
+
+                # 继续递归处理子节点
+                for key in ['sections', 'subsections']:
+                    if key in item and isinstance(item[key], list):
+                        check_children(item[key])
+
+        check_children(catalog if catalog else [])
+
+        # 构建 ID -> title 的映射
+        id_to_title = {}
+        def build_mapping(items, parents=[]):
+            for item in items:
+                item_id = item.get('id')
+                title = None
+
+                if 'chapter' in item:
+                    title = item['chapter']
+                elif 'section' in item:
+                    parent_chapter = next((p['chapter'] for p in parents if 'chapter' in p), '')
+                    if parent_chapter:
+                        title = f"{parent_chapter} - {item['section']}"
+                    else:
+                        title = item['section']
+                elif 'subsection' in item:
+                    parent_chapter = next((p['chapter'] for p in parents if 'chapter' in p), '')
+                    parent_section = next((p['section'] for p in parents if 'section' in p), '')
+                    if parent_chapter and parent_section:
+                        title = f"{parent_chapter} - {parent_section} - {item['subsection']}"
+                    elif parent_section:
+                        title = f"{parent_section} - {item['subsection']}"
+                    else:
+                        title = item['subsection']
+
+                if title and item_id:
+                    id_to_title[item_id] = title
+
+                new_parents = parents + [item]
+                for key in ['sections', 'subsections']:
+                    if key in item and isinstance(item[key], list):
+                        build_mapping(item[key], new_parents)
+
+        build_mapping(catalog if catalog else [])
+
+        # 过滤：只保留没有被选中子节点的章节
+        filtered_titles = []
+        for chapter_id in chapter_ids:
+            if chapter_id not in has_selected_children:
+                title = id_to_title.get(chapter_id)
+                if title:
+                    filtered_titles.append(title)
+                    self.logger.info(f"保留叶子节点章节: {chapter_id} -> {title}")
+            else:
+                self.logger.info(f"过滤父章节（有子节点被选中）: {chapter_id}")
+
+        return filtered_titles 
