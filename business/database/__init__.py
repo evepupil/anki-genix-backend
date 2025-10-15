@@ -5,5 +5,6 @@
 """
 
 from .catalog_db import CatalogDB
+from .flashcard_db import FlashcardDB
 
-__all__ = ['CatalogDB']
+__all__ = ['CatalogDB', 'FlashcardDB']

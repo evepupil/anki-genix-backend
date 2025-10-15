@@ -65,7 +65,8 @@ class FlashcardBusiness:
                 self.logger.info(f"闪卡结果保存成功: task_id={task_id}, result_id={result_id}, count={len(cards)}")
                 return {
                     "success": True,
-                    "result_id": result_id
+                    "result_id": result_id,
+                    "user_id": user_id
                 }
             else:
                 self.logger.error(f"闪卡结果保存失败: task_id={task_id}, 错误: {result.get('error')}")
@@ -77,6 +78,214 @@ class FlashcardBusiness:
                 "success": False,
                 "error": str(e)
             }
+
+    def _save_flashcards(self, result_id: str, user_id: str, cards: list, catalog_id: str = None, section_results: list = None) -> dict:
+        """
+        批量保存闪卡到数据库
+
+        Args:
+            result_id: 闪卡结果集ID
+            user_id: 用户ID
+            cards: 闪卡列表，每张卡包含 question, answer 等字段
+            catalog_id: 大纲ID（可选）
+            section_results: 章节结果列表（可选），用于设置 section_id
+
+        Returns:
+            dict: 保存结果
+                - success: 是否成功
+                - count: 保存数量（成功时）
+                - error: 错误信息（失败时）
+        """
+        try:
+            from business.database.flashcard_db import FlashcardDB
+
+            flashcard_db = FlashcardDB()
+
+            # 构建闪卡数据列表
+            flashcards = []
+
+            # 如果有 section_results，构建 section_id 映射
+            section_id_map = {}
+            if section_results and catalog_id:
+                # 需要从 catalog_data 中获取 section_id
+                try:
+                    from business.database.catalog_db import CatalogDB
+                    catalog_db = CatalogDB()
+
+                    # 通过 catalog_id 获取 catalog_data
+                    from business.task_manager import TaskManager
+                    task_mgr = TaskManager()
+
+                    # 从 section_results 中获取 task_id（如果有）
+                    # 或者我们可以通过 result_id 反查 task_id
+                    from business.database.flashcard_result_db import FlashcardResultDB
+                    result_db = FlashcardResultDB()
+                    result_info = result_db.get_result_by_id(result_id)
+
+                    if result_info['success']:
+                        task_id = result_info['data'].get('task_id')
+                        catalog_result = catalog_db.get_catalog_by_task_id(task_id)
+
+                        if catalog_result['success']:
+                            catalog_data = catalog_result['data'].get('catalog_data', [])
+                            # 构建 section_title -> section_id 的映射
+                            section_id_map = self._build_section_id_map(catalog_data)
+                            self.logger.info(f"构建章节ID映射成功，映射数量: {len(section_id_map)}")
+
+                except Exception as map_err:
+                    self.logger.warning(f"构建章节ID映射失败: {str(map_err)}")
+
+            # 如果有 section_results，按章节组织卡片
+            if section_results:
+                order_index = 0
+                for section_result in section_results:
+                    section_title = section_result.get('section_title', '')
+                    section_cards = section_result.get('cards', [])
+
+                    # 查找对应的 section_id
+                    section_id = section_id_map.get(section_title)
+
+                    for card in section_cards:
+                        card_data = self._convert_card_to_jsonb(card)
+                        flashcards.append({
+                            'card_type': self._detect_card_type(card),
+                            'card_data': card_data,
+                            'order_index': order_index,
+                            'section_id': section_id
+                        })
+                        order_index += 1
+            else:
+                # 没有章节信息，直接保存所有卡片
+                for idx, card in enumerate(cards):
+                    card_data = self._convert_card_to_jsonb(card)
+                    flashcards.append({
+                        'card_type': self._detect_card_type(card),
+                        'card_data': card_data,
+                        'order_index': idx
+                    })
+
+            # 批量保存闪卡
+            result = flashcard_db.batch_create_flashcards(
+                result_id=result_id,
+                user_id=user_id,
+                flashcards=flashcards,
+                catalog_id=catalog_id
+            )
+
+            if result['success']:
+                self.logger.info(f"闪卡批量保存成功: result_id={result_id}, count={len(flashcards)}")
+            else:
+                self.logger.error(f"闪卡批量保存失败: result_id={result_id}, 错误: {result.get('error')}")
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"批量保存闪卡异常: result_id={result_id}, 错误: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def _build_section_id_map(self, catalog_data: list) -> dict:
+        """
+        从 catalog_data 构建 section_title -> section_id 的映射
+
+        Args:
+            catalog_data: 大纲数据
+
+        Returns:
+            dict: section_title -> section_id 的映射
+        """
+        section_map = {}
+
+        def traverse(items, parents=[]):
+            for item in items:
+                # 获取当前项的标题和ID
+                title = None
+                item_id = item.get('id')
+
+                if 'chapter' in item:
+                    title = item['chapter']
+                elif 'section' in item:
+                    # 构建完整路径
+                    parent_chapter = next((p['chapter'] for p in parents if 'chapter' in p), '')
+                    if parent_chapter:
+                        title = f"{parent_chapter} - {item['section']}"
+                    else:
+                        title = item['section']
+                elif 'subsection' in item:
+                    parent_chapter = next((p['chapter'] for p in parents if 'chapter' in p), '')
+                    parent_section = next((p['section'] for p in parents if 'section' in p), '')
+                    if parent_chapter and parent_section:
+                        title = f"{parent_chapter} - {parent_section} - {item['subsection']}"
+                    elif parent_section:
+                        title = f"{parent_section} - {item['subsection']}"
+                    else:
+                        title = item['subsection']
+
+                if title and item_id:
+                    section_map[title] = item_id
+
+                # 递归处理子章节
+                new_parents = parents + [item]
+                for key in ['sections', 'subsections']:
+                    if key in item and isinstance(item[key], list):
+                        traverse(item[key], new_parents)
+
+        traverse(catalog_data)
+        return section_map
+
+    def _convert_card_to_jsonb(self, card: dict) -> dict:
+        """
+        将卡片转换为 JSONB 格式
+
+        Args:
+            card: 原始卡片数据
+
+        Returns:
+            dict: JSONB 格式的卡片数据
+        """
+        # 基础卡片格式
+        if 'question' in card and 'answer' in card:
+            return {
+                'question': card['question'],
+                'answer': card['answer']
+            }
+
+        # 填空卡片格式
+        if 'text' in card and 'cloze_items' in card:
+            return {
+                'text': card['text'],
+                'cloze_items': card['cloze_items']
+            }
+
+        # 选择题格式
+        if 'question' in card and 'options' in card:
+            return {
+                'question': card['question'],
+                'options': card['options'],
+                'correct_index': card.get('correct_index', 0)
+            }
+
+        # 默认返回原始数据
+        return card
+
+    def _detect_card_type(self, card: dict) -> str:
+        """
+        检测卡片类型
+
+        Args:
+            card: 卡片数据
+
+        Returns:
+            str: 卡片类型（basic/cloze/multiple_choice）
+        """
+        if 'cloze_items' in card or 'text' in card:
+            return 'cloze'
+        elif 'options' in card:
+            return 'multiple_choice'
+        else:
+            return 'basic'
 
     def analyze_catalog(self, topic, lang="zh"):
         """
@@ -211,6 +420,15 @@ class FlashcardBusiness:
 
                 if not save_result['success']:
                     self.logger.warning(f"闪卡结果保存失败，但不影响返回: {save_result.get('error')}")
+                else:
+                    # 8.1 保存具体闪卡到 flashcard 表
+                    flashcard_save_result = self._save_flashcards(
+                        result_id=save_result.get('result_id'),
+                        user_id=save_result.get('user_id'),
+                        cards=result
+                    )
+                    if not flashcard_save_result['success']:
+                        self.logger.warning(f"具体闪卡保存失败: {flashcard_save_result.get('error')}")
 
                 # 9. 更新状态：完成
                 self.logger.info(f"更新任务状态: task_id={task_id}, status=completed")
@@ -320,6 +538,15 @@ class FlashcardBusiness:
 
                 if not save_result['success']:
                     self.logger.warning(f"闪卡结果保存失败，但不影响返回: {save_result.get('error')}")
+                else:
+                    # 4.1 保存具体闪卡到 flashcard 表
+                    flashcard_save_result = self._save_flashcards(
+                        result_id=save_result.get('result_id'),
+                        user_id=save_result.get('user_id'),
+                        cards=result
+                    )
+                    if not flashcard_save_result['success']:
+                        self.logger.warning(f"具体闪卡保存失败: {flashcard_save_result.get('error')}")
 
                 # 5. 更新状态：完成
                 self.logger.info(f"更新任务状态: task_id={task_id}, status=completed")
@@ -902,6 +1129,17 @@ class FlashcardBusiness:
 
             if not save_result['success']:
                 self.logger.warning(f"闪卡结果保存失败，但不影响返回: {save_result.get('error')}")
+            else:
+                # 9.1 保存具体闪卡到 flashcard 表（带章节信息）
+                flashcard_save_result = self._save_flashcards(
+                    result_id=save_result.get('result_id'),
+                    user_id=save_result.get('user_id'),
+                    cards=all_cards,
+                    catalog_id=catalog_id,
+                    section_results=section_results
+                )
+                if not flashcard_save_result['success']:
+                    self.logger.warning(f"具体闪卡保存失败: {flashcard_save_result.get('error')}")
 
             # 10. 更新状态：完成
             self.logger.info(f"更新任务状态: task_id={task_id}, status=completed")
