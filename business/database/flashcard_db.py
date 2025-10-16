@@ -6,6 +6,7 @@
 
 from typing import Optional, Dict, List, Any
 from supabase_service.database import DatabaseService
+from business.database.flashcard_result_db import FlashcardResultDB
 from utils.logger import get_logger
 
 logger = get_logger(name="business.database.flashcard_db")
@@ -17,6 +18,7 @@ class FlashcardDB:
     def __init__(self):
         """初始化闪卡数据库操作类"""
         self.db = DatabaseService()
+        self.result_db = FlashcardResultDB()
         self.logger = logger
         self.table = "flashcard"
 
@@ -191,6 +193,79 @@ class FlashcardDB:
 
         except Exception as e:
             self.logger.error(f"批量创建闪卡异常: result_id={result_id}, 错误: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def get_flashcards_by_task_id(self, task_id: str) -> Dict[str, Any]:
+        """
+        根据任务ID查询闪卡列表
+        
+        实现步骤：
+        1. 通过 task_id 在 flashcard_result 表中查询 result_id
+        2. 使用 result_id 在 flashcard 表中查询所有未删除的闪卡
+        3. 按 order_index 排序返回
+        
+        Args:
+            task_id: 任务ID
+            
+        Returns:
+            dict: 查询结果
+                - success: 是否成功
+                - data: 闪卡列表（成功时），按 order_index 排序
+                - count: 闪卡数量（成功时）
+                - result_id: 闪卡结果ID（成功时）
+                - error: 错误信息（失败时）
+        """
+        try:
+            self.logger.info(f"根据任务ID查询闪卡: task_id={task_id}")
+            
+            # 步骤1: 根据 task_id 查询 flashcard_result 表获取 result_id
+            result_query = self.result_db.get_result_by_task_id(task_id)
+            
+            if not result_query['success']:
+                self.logger.warning(f"未找到任务对应的闪卡结果: task_id={task_id}")
+                return {
+                    "success": False,
+                    "error": f"未找到任务对应的闪卡结果: {result_query.get('error', '未知错误')}"
+                }
+            
+            result_data = result_query['data']
+            result_id = result_data.get('id')
+            
+            self.logger.info(f"找到闪卡结果: task_id={task_id}, result_id={result_id}")
+            
+            # 步骤2: 使用 result_id 查询 flashcard 表中所有未删除的闪卡
+            flashcards_result = self.db.select(
+                table=self.table,
+                filters={"result_id": result_id, "is_deleted": False},
+                order_by="order_index"  # 按 order_index 升序排序
+            )
+            
+            if flashcards_result['success']:
+                self.logger.info(
+                    f"查询闪卡成功: task_id={task_id}, result_id={result_id}, "
+                    f"count={flashcards_result['count']}"
+                )
+                return {
+                    "success": True,
+                    "data": flashcards_result['data'],
+                    "count": flashcards_result['count'],
+                    "result_id": result_id
+                }
+            else:
+                self.logger.error(
+                    f"查询闪卡失败: task_id={task_id}, result_id={result_id}, "
+                    f"错误: {flashcards_result.get('error')}"
+                )
+                return {
+                    "success": False,
+                    "error": f"查询闪卡失败: {flashcards_result.get('error')}"
+                }
+                
+        except Exception as e:
+            self.logger.error(f"根据任务ID查询闪卡异常: task_id={task_id}, 错误: {str(e)}", exc_info=True)
             return {
                 "success": False,
                 "error": str(e)
