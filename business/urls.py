@@ -18,4 +18,7 @@ urlpatterns = [
     path('catalog/topic/', views.analyze_catalog_from_topic, name='analyze_catalog_from_topic'),
     path('catalog/text/', views.analyze_catalog_from_text, name='analyze_catalog_from_text'),
     path('catalog/file/', views.analyze_catalog_from_file, name='analyze_catalog_from_file'),
+
+    # 导出接口
+    path('flashcards/export/', views.export_flashcards, name='export_flashcards'),
 ]
