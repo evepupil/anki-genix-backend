@@ -1,0 +1,38 @@
+# fly.toml app configuration file generated for anki-genix-backend
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'anki-genix-backend'
+primary_region = 'hkg'  # 香港区域，也可以选择 'nrt' (东京) 或 'sin' (新加坡)
+
+[build]
+
+[env]
+  PORT = '8080'
+  DJANGO_SETTINGS_MODULE = 'settings'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [[http_service.checks]]
+    interval = '15s'
+    timeout = '10s'
+    grace_period = '30s'
+    method = 'GET'
+    path = '/api/health'  # 需要添加健康检查端点
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[[mounts]]
+  source = 'anki_genix_data'
+  destination = '/app/data'
+  initial_size = '1gb'

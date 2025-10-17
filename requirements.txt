@@ -1,8 +1,11 @@
 # AI服务依赖
 openai>=1.0.0
 
-# Django和Zappa依赖
+# Django和相关依赖
 django>=4.0.0
+djangorestframework>=3.14.0
+django-cors-headers>=4.0.0
+gunicorn>=21.0.0
 zappa>=0.56.0
 
 # Anki导出依赖
