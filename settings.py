@@ -105,10 +105,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3001",
     "http://127.0.0.1:3002",
     "http://127.0.0.1:3003",
+    "https://ankigenix.com"
 ]
 
 # 开发环境允许所有来源（生产环境请删除）
-CORS_ALLOW_ALL_ORIGINS = True
+#CORS_ALLOW_ALL_ORIGINS = True
 
 # 允许的请求头
 CORS_ALLOW_HEADERS = [

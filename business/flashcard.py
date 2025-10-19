@@ -619,8 +619,13 @@ class FlashcardBusiness:
 
             self.logger.info(f"开始爬取网页: {url}")
 
-            # 运行异步爬虫获取markdown格式内容
-            crawled_content = asyncio.run(crawl_web_content(url, "markdown"))
+            # 运行异步爬虫获取markdown格式内容，使用学习内容提取模式
+            crawled_content = asyncio.run(crawl_web_content(
+                url=url,
+                type="markdown",
+                mode="learning_content",  # 使用学习内容提取模式
+                lang=lang
+            ))
 
             if not crawled_content or not crawled_content.strip():
                 self.logger.error("爬取到的网页内容为空")

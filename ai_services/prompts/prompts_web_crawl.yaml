@@ -1,0 +1,83 @@
+# 网页爬取内容提取提示词
+# 用于指导 crawl4ai 提取和清洗网页内容
+
+web_content_extraction:
+  # 学习内容提取模式：提取适合生成闪卡的核心学习内容
+  learning_content:
+    zh:
+      instruction: |
+        请从网页内容中提取适合学习和制作闪卡的核心知识内容。要求：
+        1. 保留所有有价值的知识点、概念、定义、步骤、示例
+        2. 移除广告、导航栏、侧边栏、评论区、推荐链接等无关内容
+        3. 保留文章的标题、小标题层级结构
+        4. 保留代码块、表格、列表等结构化内容
+        5. 移除"点击查看""扫码关注""分享到"等营销性文字
+        6. 保持内容的连贯性和逻辑性
+
+        输出格式：Markdown
+
+    en:
+      instruction: |
+        Please extract core knowledge content suitable for learning and creating flashcards from the webpage. Requirements:
+        1. Keep all valuable knowledge points, concepts, definitions, steps, and examples
+        2. Remove ads, navigation bars, sidebars, comment sections, recommended links, and other irrelevant content
+        3. Preserve the article's title and heading hierarchy
+        4. Keep structured content such as code blocks, tables, and lists
+        5. Remove marketing text like "Click to view", "Scan to follow", "Share to"
+        6. Maintain content coherence and logic
+
+        Output format: Markdown
+
+    ja:
+      instruction: |
+        ウェブページから学習とフラッシュカード作成に適したコア知識コンテンツを抽出してください。要件：
+        1. すべての価値のある知識ポイント、概念、定義、手順、例を保持する
+        2. 広告、ナビゲーションバー、サイドバー、コメントセクション、推奨リンクなどの無関係なコンテンツを削除する
+        3. 記事のタイトルと見出し階層構造を保持する
+        4. コードブロック、テーブル、リストなどの構造化コンテンツを保持する
+        5. 「クリックして表示」「フォローのためにスキャン」「共有」などのマーケティングテキストを削除する
+        6. コンテンツの一貫性と論理性を維持する
+
+        出力形式：Markdown
+
+  # 简洁模式：仅提取主要内容，适合快速浏览
+  concise:
+    zh:
+      instruction: |
+        请提取网页的核心内容，以简洁、清晰的方式呈现。要求：
+        1. 只保留主要内容和关键信息
+        2. 移除所有装饰性、营销性内容
+        3. 保持核心结构（标题、段落）
+        4. 适当合并冗余内容
+
+        输出格式：Markdown
+
+    en:
+      instruction: |
+        Please extract the core content of the webpage and present it in a concise and clear manner. Requirements:
+        1. Keep only main content and key information
+        2. Remove all decorative and marketing content
+        3. Maintain core structure (titles, paragraphs)
+        4. Appropriately merge redundant content
+
+        Output format: Markdown
+
+  # 完整模式：保留尽可能多的内容，仅移除明显无关内容
+  full:
+    zh:
+      instruction: |
+        请提取网页的完整内容，保留所有有用信息。要求：
+        1. 保留文章的所有段落、图片描述、脚注等
+        2. 仅移除广告、导航等明显无关内容
+        3. 保持原文的完整结构和层次
+
+        输出格式：Markdown
+
+    en:
+      instruction: |
+        Please extract the complete content of the webpage, keeping all useful information. Requirements:
+        1. Keep all paragraphs, image descriptions, footnotes, etc.
+        2. Only remove obviously irrelevant content such as ads and navigation
+        3. Maintain the complete structure and hierarchy of the original text
+
+        Output format: Markdown
