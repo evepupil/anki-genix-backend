@@ -74,6 +74,17 @@ async def global_exception_handler(request, exc):
     )
 
 
+import os
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+    # 生产环境配置
+    uvicorn.run(
+        "main:app",  # 字符串形式
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", "8000")),
+        reload=False,  # 生产环境关闭热重载
+        workers=int(os.getenv("WORKERS", "1")),  # 根据环境变量调整
+        log_level="info"
+    )
