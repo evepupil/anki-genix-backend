@@ -38,5 +38,5 @@ RUN mkdir -p exports && \
 # 暴露端口（fly.io 默认使用 8080）
 EXPOSE 8080
 
-# 启动命令 - 使用 gunicorn 运行 Django
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "120", "wsgi:application"]
+# 启动命令 - 使用 uvicorn 运行 FastAPI
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "2"]
