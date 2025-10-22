@@ -9,9 +9,11 @@
 - POST /api/flashcards/generate/file/section/
 """
 import os
+import re
 import json
 import tempfile
 from typing import Optional
+from urllib.parse import urlparse
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
 from api.models import (
@@ -25,6 +27,65 @@ from utils.logger import get_logger
 
 logger = get_logger(name="api.routes.flashcard")
 router = APIRouter()
+
+
+def _validate_url_security(url: str) -> Optional[str]:
+    """
+    验证URL安全性，防止文件路径和非HTTP协议
+
+    参数:
+        url: 待验证的URL字符串
+
+    返回:
+        如果URL不安全，返回错误信息字符串；如果安全，返回None
+    """
+    if not url:
+        return "URL不能为空"
+
+    url_stripped = url.strip()
+
+    # 检查是否包含文件路径特征（Windows和Unix风格）
+    # Windows绝对路径: C:\, D:\, etc.
+    if re.match(r'^[a-zA-Z]:\\', url_stripped):
+        return "不支持文件路径，请提供有效的HTTP/HTTPS网页链接"
+
+    # Unix绝对路径: /home, /usr, etc.
+    if re.match(r'^/[a-zA-Z]', url_stripped):
+        return "不支持文件路径，请提供有效的HTTP/HTTPS网页链接"
+
+    # 相对路径: ./
+    if url_stripped.startswith('./'):
+        return "不支持文件路径，请提供有效的HTTP/HTTPS网页链接"
+
+    # 父目录路径: ../
+    if url_stripped.startswith('../'):
+        return "不支持文件路径，请提供有效的HTTP/HTTPS网页链接"
+
+    # Unix home目录: ~/
+    if url_stripped.startswith('~/'):
+        return "不支持文件路径，请提供有效的HTTP/HTTPS网页链接"
+
+    # 检查file://协议
+    if url_stripped.lower().startswith('file://'):
+        return "不支持file://协议，仅允许HTTP和HTTPS协议"
+
+    # 尝试解析URL
+    try:
+        parsed = urlparse(url_stripped)
+
+        # 检查协议是否为http或https
+        if parsed.scheme not in ['http', 'https']:
+            return f"不支持的协议: {parsed.scheme}。仅允许HTTP和HTTPS协议"
+
+        # 检查是否有主机名
+        if not parsed.netloc:
+            return "无效的URL格式：缺少主机名"
+
+        return None  # 验证通过
+
+    except Exception as e:
+        return f"无效的URL格式: {str(e)}"
+
 
 
 @router.post("/generate/text/", response_model=FlashcardResponse)
@@ -317,7 +378,7 @@ async def generate_flashcards_from_url(request: FlashcardURLRequest):
                 content={'success': False, 'error': validation['error']}
             )
 
-        # 3. 验证URL
+        # 3. 验证URL是否为空
         if not request.url:
             logger.warning("URL为空")
             return JSONResponse(
@@ -325,7 +386,16 @@ async def generate_flashcards_from_url(request: FlashcardURLRequest):
                 content={'success': False, 'error': '请提供有效的URL地址'}
             )
 
-        # 4. 验证URL是否与任务信息表一致
+        # 4. URL安全校验：防止文件路径和非HTTP协议
+        url_validation_error = _validate_url_security(request.url)
+        if url_validation_error:
+            logger.warning(f"URL安全校验失败: {url_validation_error}")
+            return JSONResponse(
+                status_code=400,
+                content={'success': False, 'error': url_validation_error}
+            )
+
+        # 5. 验证URL是否与任务信息表一致
         task = validation['task']
         input_data = task.get('input_data', {})
         expected_url = input_data.get('web_url')
@@ -346,9 +416,9 @@ async def generate_flashcards_from_url(request: FlashcardURLRequest):
                     content={'success': False, 'error': '闪卡数量必须在1-50之间'}
                 )
 
-        # 6. 调用业务层生成闪卡
+        # 6. 调用业务层生成闪卡（异步调用）
         biz = FlashcardBusiness()
-        result = biz.generate_flashcards_from_url(request.url, request.card_number, request.lang)
+        result = await biz.generate_flashcards_from_url(request.url, request.card_number, request.lang)
 
         # 7. 返回结果
         if result['success']:

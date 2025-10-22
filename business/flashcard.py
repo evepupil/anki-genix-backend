@@ -577,7 +577,7 @@ class FlashcardBusiness:
                 "cards": []
             }
 
-    def generate_flashcards_from_url(self, url, card_number=None, lang="zh"):
+    async def generate_flashcards_from_url(self, url, card_number=None, lang="zh"):
         """
         根据URL爬取网页内容并生成闪卡列表。
 
@@ -614,18 +614,17 @@ class FlashcardBusiness:
 
         try:
             # 使用web_crawl爬取网页内容
-            import asyncio
             from ai_services.crawl.web_crawl import crawl_web_content
 
             self.logger.info(f"开始爬取网页: {url}")
 
-            # 运行异步爬虫获取markdown格式内容，使用学习内容提取模式
-            crawled_content = asyncio.run(crawl_web_content(
+            # 直接await异步爬虫获取markdown格式内容，使用学习内容提取模式
+            crawled_content = await crawl_web_content(
                 url=url,
                 type="markdown",
                 mode="learning_content",  # 使用学习内容提取模式
                 lang=lang
-            ))
+            )
 
             if not crawled_content or not crawled_content.strip():
                 self.logger.error("爬取到的网页内容为空")
